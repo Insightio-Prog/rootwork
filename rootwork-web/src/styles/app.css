@@ -3185,7 +3185,7 @@ body {
 .heritage-bar.is-panel-open { left: calc(50% - 212px); width: min(720px, max(320px, calc(100% - 800px))); }
 .heritage-track {
   display: flex;
-  height: 44px;
+  height: 38px;
   border-radius: 999px;
   overflow: hidden;
   border: 1px solid var(--color-divider);
@@ -3207,3 +3207,8 @@ body {
 .heritage-text strong { font-weight: 700; }
 .heritage-text.is-stacked { display: flex; flex-direction: column; align-items: center; line-height: 1.1; padding: 0 3px; max-width: 100%; }
 .heritage-text.is-stacked small { font-size: 9.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.heritage-caption { margin-bottom: 6px; text-align: center; font-size: 11.5px; color: var(--color-neutral-700); letter-spacing: 0.02em; }
+.heritage-caption strong { text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-accent-700); font-size: 11px; }
+.heritage-bar { bottom: 22px; width: min(780px, max(320px, calc(100% - 340px))); }
+.heritage-bar.is-panel-open { width: min(780px, max(320px, calc(100% - 800px))); }
+.heritage-track { box-shadow: var(--shadow-sm); }

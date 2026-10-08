@@ -8,7 +8,7 @@ import {
   clampLayoutGap,
   familyLayoutConstants,
 } from "../chart/familyLayout";
-import { type Gender, type Person } from "../data/people";
+import { displayName, type Gender, type Person } from "../data/people";
 import { IconEye, IconHome, IconPanel, IconPencil, IconSettings, IconTrash } from "../icons";
 import { FAN_MAX_GENERATIONS } from "../tree/fan";
 import {
@@ -712,7 +712,12 @@ export function FamilyTreeCanvas({
       )}
 
       {homePersonId && people[homePersonId] ? (
-        <HeritageBar people={people} homeId={homePersonId} panelOpen={panelOpen && Boolean(selected)} />
+        <HeritageBar
+          people={people}
+          homeId={homePersonId}
+          homeName={displayName(people[homePersonId])}
+          panelOpen={panelOpen && Boolean(selected)}
+        />
       ) : null}
 
       {viewMenu && (

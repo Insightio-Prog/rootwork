@@ -2,23 +2,25 @@ import { useMemo } from "react";
 import type { Person } from "../data/people";
 import { computeHeritage, UNKNOWN_KEY } from "../tree/heritage";
 
+// Soft, earthy versions of the national colours so the bar sits with the cream and terracotta of the app.
 const COLOURS: Record<string, { bg: string; fg: string }> = {
-  "gb-eng": { bg: "#ffffff", fg: "#2b2724" },
-  ie: { bg: "#3f9b5f", fg: "#ffffff" },
-  "gb-wls": { bg: "#cf4a42", fg: "#ffffff" },
-  "gb-sct": { bg: "#3a6fb5", fg: "#ffffff" },
-  [UNKNOWN_KEY]: { bg: "#9a6a3f", fg: "#ffffff" },
+  "gb-eng": { bg: "#f7efe0", fg: "#4a3a2a" },
+  ie: { bg: "#8aa987", fg: "#27381f" },
+  "gb-wls": { bg: "#c9776a", fg: "#ffffff" },
+  "gb-sct": { bg: "#7f9ebb", fg: "#17283a" },
+  [UNKNOWN_KEY]: { bg: "#a98467", fg: "#ffffff" },
 };
-const OTHER = ["#7b6aa8", "#c9962b", "#3b8f94", "#a8567a", "#6f7f3a", "#5d6f8a"];
+const OTHER = ["#a395bd", "#d2b072", "#7fb0b0", "#bf8aa3", "#a2ad7a", "#93a0b5"];
 
 type HeritageBarProps = {
   people: Record<string, Person>;
   homeId: string;
+  homeName: string;
   panelOpen: boolean;
 };
 
 /** The home person's heritage as one bar: each nation's width is its share of their ancestry. */
-export function HeritageBar({ people, homeId, panelOpen }: HeritageBarProps) {
+export function HeritageBar({ people, homeId, homeName, panelOpen }: HeritageBarProps) {
   const shares = useMemo(() => computeHeritage(people, homeId), [people, homeId]);
   if (shares.length === 0) return null;
   let other = 0;
@@ -28,27 +30,29 @@ export function HeritageBar({ people, homeId, panelOpen }: HeritageBarProps) {
     return { ...item, ...colour, percent: Math.round(item.share * 100) };
   });
   const summary = parts.map((part) => `${part.percent}% ${part.label}`).join(", ");
+  // Every section gets the width its own label needs, and the rest of the bar is shared out by percentage,
+  // so the smallest section can always show its name.
+  const base = Math.min(
+    150,
+    Math.max(76, ...parts.map((part) => Math.round(`${part.percent}% ${part.label}`.length * 7.4 + 22))),
+  );
 
   return (
     <div className={`heritage-bar${panelOpen ? " is-panel-open" : ""}`} role="img" aria-label={`Heritage: ${summary}`}>
+      <div className="heritage-caption">
+        <strong>Heritage</strong> · share of {homeName}&rsquo;s ancestry by nation, from nationality or birthplace
+      </div>
       <div className="heritage-track">
         {parts.map((part) => (
           <div
             key={part.key}
             className="heritage-seg"
-            style={{ flexGrow: part.share, flexBasis: 0, background: part.bg, color: part.fg }}
+            style={{ flex: `${part.share} 1 ${base}px`, background: part.bg, color: part.fg }}
             title={`${part.percent}% ${part.label}`}
           >
-            {part.share >= 0.14 ? (
-              <span className="heritage-text">
-                <strong>{part.percent}%</strong> {part.label}
-              </span>
-            ) : part.share >= 0.025 ? (
-              <span className="heritage-text is-stacked">
-                <strong>{part.percent}%</strong>
-                <small>{part.label}</small>
-              </span>
-            ) : null}
+            <span className="heritage-text">
+              <strong>{part.percent}%</strong> {part.label}
+            </span>
           </div>
         ))}
       </div>
