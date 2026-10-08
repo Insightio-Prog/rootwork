@@ -39,13 +39,14 @@ export function HeritageBar({ people, homeId, panelOpen }: HeritageBarProps) {
             style={{ flexGrow: part.share, flexBasis: 0, background: part.bg, color: part.fg }}
             title={`${part.percent}% ${part.label}`}
           >
-            {part.share >= 0.07 ? (
+            {part.share >= 0.14 ? (
               <span className="heritage-text">
                 <strong>{part.percent}%</strong> {part.label}
               </span>
             ) : part.share >= 0.025 ? (
-              <span className="heritage-text">
+              <span className="heritage-text is-stacked">
                 <strong>{part.percent}%</strong>
+                <small>{part.label}</small>
               </span>
             ) : null}
           </div>
