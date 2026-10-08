@@ -1,20 +1,5 @@
 export type Gender = "female" | "male";
 
-export type FactVerdict = "supported" | "weak" | "missing" | "conflict";
-
-export type FactReview = {
-  id: string;
-  verdict: FactVerdict;
-  note: string;
-};
-
-export type EvidenceReview = {
-  reviewedAt: string;
-  model: string;
-  summary: string;
-  facts: FactReview[];
-};
-
 export type MediaRef = {
   id: string;
   originalName: string;

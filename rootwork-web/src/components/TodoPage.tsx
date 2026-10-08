@@ -1,17 +1,15 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { displayName, type Person } from "../data/people";
 import { openTodoCount, type EvidenceTodo, type TodoPriority, type TreeTodos } from "../data/todos";
-import { hasApiKey, invokeErrorMessage, suggestTreeTodos } from "../review/claude";
-import { buildTreeTodoBrief } from "../review/treeTodos";
 
 type TodoPageProps = {
   people: Record<string, Person>;
   todos: TreeTodos;
-  onReplaceTodos: (todos: TreeTodos) => void;
+  onAddTodo: (input: { personId: string; title: string; detail: string; priority: TodoPriority }) => void;
+  onRemoveTodo: (id: string) => void;
   onSetDone: (id: string, done: boolean) => void;
   onClearTodos: () => void;
   onOpenPerson: (id: string) => void;
-  onNeedApiKey: () => void;
 };
 
 const PRIORITY_LABEL: Record<TodoPriority, string> = {
@@ -21,13 +19,6 @@ const PRIORITY_LABEL: Record<TodoPriority, string> = {
 };
 
 type Filter = "open" | "done" | "all";
-
-function formatGeneratedAt(iso: string): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
 
 function groupByPerson(items: EvidenceTodo[], people: Record<string, Person>) {
   const groups: { personId: string; name: string; items: EvidenceTodo[] }[] = [];
@@ -41,7 +32,7 @@ function groupByPerson(items: EvidenceTodo[], people: Record<string, Person>) {
     index.set(item.personId, groups.length);
     groups.push({
       personId: item.personId,
-      name: people[item.personId] ? displayName(people[item.personId]) : "Unknown person",
+      name: people[item.personId] ? displayName(people[item.personId]) : item.personId ? "Unknown person" : "General",
       items: [item],
     });
   }
@@ -51,16 +42,17 @@ function groupByPerson(items: EvidenceTodo[], people: Record<string, Person>) {
 export function TodoPage({
   people,
   todos,
-  onReplaceTodos,
+  onAddTodo,
+  onRemoveTodo,
   onSetDone,
   onClearTodos,
   onOpenPerson,
-  onNeedApiKey,
 }: TodoPageProps) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [filter, setFilter] = useState<Filter>("open");
-  const personCount = Object.keys(people).length;
+  const [title, setTitle] = useState("");
+  const [detail, setDetail] = useState("");
+  const [personId, setPersonId] = useState("");
+  const [priority, setPriority] = useState<TodoPriority>("medium");
   const openCount = openTodoCount(todos);
   const doneCount = todos.items.length - openCount;
   const visible = todos.items.filter((item) => {
@@ -69,29 +61,17 @@ export function TodoPage({
     return true;
   });
   const groups = groupByPerson(visible, people);
-  const scanned = Boolean(todos.generatedAt);
+  const sortedPeople = Object.values(people).sort((a, b) =>
+    displayName(a).localeCompare(displayName(b)),
+  );
 
-  async function handleScan() {
-    if (busy) return;
-    setError("");
-    if (personCount === 0) {
-      setError("Add people to the tree first.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const ready = await hasApiKey();
-      if (!ready) {
-        onNeedApiKey();
-        return;
-      }
-      const next = await suggestTreeTodos(buildTreeTodoBrief(people));
-      onReplaceTodos(next);
-    } catch (err) {
-      setError(invokeErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
+  function handleAdd(event: FormEvent) {
+    event.preventDefault();
+    if (!title.trim()) return;
+    onAddTodo({ personId, title, detail, priority });
+    setTitle("");
+    setDetail("");
+    setFilter("open");
   }
 
   return (
@@ -101,49 +81,66 @@ export function TodoPage({
           <div>
             <div className="placeholder-kicker">Research</div>
             <h3>Research next</h3>
-            <p>
-              Claude reads a brief of the whole tree — names, dates, places, and family links — then
-              lists gaps worth filling in next.
-            </p>
+            <p>Your own checklist of things to find out. Tie each one to a person, or leave it general.</p>
           </div>
           <div className="todo-hero-actions">
-            {scanned && todos.items.length > 0 && (
+            {todos.items.length > 0 && (
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
-                  onClearTodos();
-                  setFilter("open");
-                  setError("");
+                  if (window.confirm("Clear the whole list?")) {
+                    onClearTodos();
+                    setFilter("open");
+                  }
                 }}
-                disabled={busy}
               >
                 Clear list
               </button>
             )}
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => void handleScan()}
-              disabled={busy || personCount === 0}
-            >
-              {busy ? "Scanning…" : scanned ? "Scan again" : "Scan tree"}
-            </button>
           </div>
         </div>
 
-        {scanned && (
-          <p className="todo-meta">
-            {formatGeneratedAt(todos.generatedAt)}
-            {todos.model ? ` · ${todos.model}` : ""}
-            {` · ${personCount} ${personCount === 1 ? "person" : "people"}`}
-            {` · ${openCount} open, ${doneCount} done`}
-          </p>
-        )}
-        {todos.summary && <p className="todo-summary">{todos.summary}</p>}
-        {error && <p className="dialog-error">{error}</p>}
+        <form className="card elev-md todo-add" onSubmit={handleAdd}>
+          <input
+            className="todo-add-input"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="What needs finding out?"
+            aria-label="To-do title"
+          />
+          <input
+            className="todo-add-input"
+            value={detail}
+            onChange={(event) => setDetail(event.target.value)}
+            placeholder="Notes (optional)"
+            aria-label="Notes"
+          />
+          <div className="todo-add-row">
+            <select value={personId} onChange={(event) => setPersonId(event.target.value)} aria-label="Person">
+              <option value="">General (no person)</option>
+              {sortedPeople.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {displayName(person)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as TodoPriority)}
+              aria-label="Priority"
+            >
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <button type="submit" className="btn btn-primary" disabled={!title.trim()}>
+              Add
+            </button>
+          </div>
+        </form>
 
-        {scanned && todos.items.length > 0 && (
+        {todos.items.length > 0 && (
           <div className="todo-filters" role="tablist" aria-label="To-do filter">
             {(
               [
@@ -164,27 +161,14 @@ export function TodoPage({
           </div>
         )}
 
-        {!scanned && !busy && (
-          <div className="card elev-md todo-empty">
-            <p>
-              Scan the tree to build a checklist. Ticked items stay ticked when you scan again, so
-              you can keep a running research list.
-            </p>
-          </div>
-        )}
-
-        {scanned && visible.length === 0 && (
+        {todos.items.length > 0 && visible.length === 0 && (
           <div className="card elev-md todo-empty">
             <p>
               {filter === "done"
                 ? "Nothing ticked off yet."
                 : filter === "open"
-                  ? doneCount > 0
-                    ? "Everything on this list is ticked off, so Open is empty. Switch to Done to see them, or clear the list and scan again for a fresh checklist."
-                    : personCount > 0
-                      ? "Nothing left open. Scan again after you add facts, or clear the list to start over."
-                      : "Add people to the tree, then scan again."
-                  : "Claude did not find anything to collect right now."}
+                  ? "Everything is ticked off. Nice work! Switch to Done to see them."
+                  : "Nothing here."}
             </p>
           </div>
         )}
@@ -222,6 +206,14 @@ export function TodoPage({
                       {item.detail && <span className="todo-detail">{item.detail}</span>}
                     </span>
                   </label>
+                  <button
+                    type="button"
+                    className="btn btn-ghost add-rel-btn"
+                    onClick={() => onRemoveTodo(item.id)}
+                    aria-label={`Delete ${item.title}`}
+                  >
+                    Delete
+                  </button>
                 </li>
               ))}
             </ul>

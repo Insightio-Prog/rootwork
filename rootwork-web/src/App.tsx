@@ -318,14 +318,14 @@ export default function App() {
           <TodoPage
             people={people}
             todos={todos}
-            onReplaceTodos={store.replaceTodos}
+            onAddTodo={store.addTodo}
+            onRemoveTodo={store.removeTodo}
             onSetDone={store.setTodoDone}
             onClearTodos={store.clearTodos}
             onOpenPerson={(id) => {
               ui.setNav("tree");
               ui.selectPerson(id);
             }}
-            onNeedApiKey={() => setSettingsOpen(true)}
           />
         ) : (
           <PlaceholderPage title={NAV_LABELS[ui.nav]} />

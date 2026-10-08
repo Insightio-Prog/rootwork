@@ -8,9 +8,8 @@ type Env = { ANTHROPIC_API_KEY?: string; FAMILY_PASSWORD?: string };
 type Ctx = { request: Request; env: Env };
 type Json = Record<string, any>;
 
-const MODELS = ["claude-sonnet-5-5", "claude-sonnet-5", "claude-sonnet-4-6"];
-const MAX_FILES = 12;
-const MAX_FILE_B64 = 7 * 1024 * 1024; // ~5 MB of file per attachment
+// Ask uses Haiku (fast and cheap); Sonnet is the fallback if Haiku is unavailable.
+const MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-sonnet-4-6"];
 const MAX_BODY = 40 * 1024 * 1024;
 const MAX_TEXT = 400_000;
 
@@ -29,77 +28,6 @@ async function passwordOk(given: string, expected: string) {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
   return diff === 0;
-}
-
-const REVIEW_TOOL = {
-  name: "submit_review",
-  max_tokens: 1600,
-  tools: [
-    {
-      name: "submit_review",
-      description: "Record whether each genealogical fact is supported by the attached evidence.",
-      input_schema: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          facts: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                verdict: { type: "string", enum: ["supported", "weak", "missing", "conflict"] },
-                note: { type: "string" },
-              },
-              required: ["id", "verdict", "note"],
-            },
-          },
-        },
-        required: ["summary", "facts"],
-      },
-    },
-  ],
-};
-
-const TODOS_TOOL = {
-  name: "submit_todos",
-  max_tokens: 4096,
-  tools: [
-    {
-      name: "submit_todos",
-      description: "List missing genealogical evidence to collect next.",
-      input_schema: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          items: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                personId: { type: "string" },
-                title: { type: "string" },
-                detail: { type: "string" },
-                priority: { type: "string", enum: ["high", "medium", "low"] },
-              },
-              required: ["id", "personId", "title", "detail", "priority"],
-            },
-          },
-        },
-        required: ["summary", "items"],
-      },
-    },
-  ],
-};
-
-function imageMime(mime: string, ext: string) {
-  const e = ext.replace(/^\./, "").toLowerCase();
-  if (mime === "image/png" || e === "png") return "image/png";
-  if (mime === "image/gif" || e === "gif") return "image/gif";
-  if (mime === "image/webp" || e === "webp") return "image/webp";
-  return "image/jpeg";
 }
 
 async function postAnthropic(key: string, body: Json): Promise<Json> {
@@ -137,48 +65,6 @@ async function withModels<T>(run: (model: string) => Promise<T>): Promise<T> {
   throw last;
 }
 
-function normalizeTodos(input: Json): Json {
-  if (!Array.isArray(input.items)) {
-    const alt = input.todos ?? input.tasks;
-    if (alt) input.items = alt;
-  }
-  if (Array.isArray(input.items)) {
-    for (const item of input.items) {
-      const fill = (target: string, keys: string[]) => {
-        if (typeof item[target] === "string" && item[target]) return;
-        for (const key of keys) {
-          if (item[key] != null) {
-            item[target] = item[key];
-            return;
-          }
-        }
-      };
-      fill("personId", ["person_id", "person", "subjectId", "subject_id"]);
-      fill("title", ["name", "task"]);
-      fill("detail", ["note", "description", "reason"]);
-    }
-  }
-  return input;
-}
-
-async function callTool(key: string, content: Json[], tool: typeof REVIEW_TOOL, isTodos: boolean) {
-  return withModels(async (model) => {
-    const payload = await postAnthropic(key, {
-      model,
-      max_tokens: tool.max_tokens,
-      tool_choice: { type: "tool", name: tool.name },
-      tools: tool.tools,
-      messages: [{ role: "user", content }],
-    });
-    const block = (payload.content ?? []).find((item: Json) => item.type === "tool_use");
-    if (!block?.input) throw new Error("Claude did not return a result.");
-    let input = block.input as Json;
-    if (isTodos) input = normalizeTodos(input);
-    input.model = model;
-    return input;
-  });
-}
-
 export async function onRequestPost({ request, env }: Ctx): Promise<Response> {
   if (!env.ANTHROPIC_API_KEY || !env.FAMILY_PASSWORD) {
     return reply({ error: "Claude is not set up on this site yet." }, 503);
@@ -203,48 +89,6 @@ export async function onRequestPost({ request, env }: Ctx): Promise<Response> {
     switch (body.kind) {
       case "check":
         return reply({ ok: true });
-
-      case "review": {
-        const content: Json[] = [];
-        const skipped: string[] = [];
-        const files: Json[] = Array.isArray(body.files) ? body.files.slice(0, MAX_FILES) : [];
-        for (const file of files) {
-          const name = String(file.name ?? "file");
-          const data = typeof file.data === "string" ? file.data : "";
-          const ext = String(file.ext ?? "").replace(/^\./, "").toLowerCase();
-          const mime = String(file.mime ?? "");
-          if (!data) {
-            skipped.push(`${name} could not be read`);
-            continue;
-          }
-          if (data.length > MAX_FILE_B64) {
-            skipped.push(`${name} is too large to send`);
-            continue;
-          }
-          if (mime === "application/pdf" || ext === "pdf") {
-            content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });
-          } else if (
-            ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(mime) ||
-            ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
-          ) {
-            content.push({ type: "image", source: { type: "base64", media_type: imageMime(mime, ext), data } });
-          } else {
-            skipped.push(`${name} is not a JPEG, PNG, GIF, WebP, or PDF`);
-            continue;
-          }
-          content.push({ type: "text", text: `The previous file is: ${String(file.label ?? name)}` });
-        }
-        let text = String(body.text ?? "").slice(0, MAX_TEXT);
-        if (skipped.length) text += `\n\nFiles not sent:\n- ${skipped.join("\n- ")}`;
-        content.push({ type: "text", text });
-        return reply(await callTool(env.ANTHROPIC_API_KEY, content, REVIEW_TOOL, false));
-      }
-
-      case "todos": {
-        const text = String(body.text ?? "").trim().slice(0, MAX_TEXT);
-        if (!text) return reply({ error: "The tree brief was empty." }, 400);
-        return reply(await callTool(env.ANTHROPIC_API_KEY, [{ type: "text", text }], TODOS_TOOL, true));
-      }
 
       case "ask": {
         const messages = (Array.isArray(body.messages) ? body.messages : [])

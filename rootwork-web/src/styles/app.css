@@ -3212,3 +3212,10 @@ body {
 .heritage-bar { bottom: 22px; width: min(780px, max(320px, calc(100% - 340px))); }
 .heritage-bar.is-panel-open { width: min(780px, max(320px, calc(100% - 800px))); }
 .heritage-track { box-shadow: var(--shadow-sm); }
+
+.todo-add { display: grid; gap: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.todo-add-input, .todo-add select { width: 100%; padding: 8px 10px; border: 1px solid var(--line, #d9cdb8); border-radius: 8px; background: var(--paper, #fffdf8); font: inherit; color: inherit; }
+.todo-add-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.todo-add-row select { flex: 1 1 160px; width: auto; }
+.todo-item { display: flex; align-items: flex-start; gap: 8px; }
+.todo-item .todo-row { flex: 1; }

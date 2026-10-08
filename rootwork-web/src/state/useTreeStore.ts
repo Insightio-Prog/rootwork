@@ -20,10 +20,12 @@ import {
 } from "../data/people";
 import {
   EMPTY_TODOS,
-  mergeGeneratedTodos,
+  addTodoItem,
+  removeTodoItem,
   normalizeTreeTodos,
   pruneTodosForPeople,
   toggleTodoItem,
+  type TodoPriority,
   type TreeTodos,
 } from "../data/todos";
 import { deleteMedia, importMedia, importMediaFiles } from "../media/store";
@@ -751,11 +753,15 @@ export function useTreeStore() {
     });
   }, []);
 
-  const replaceTodos = useCallback((incoming: TreeTodos) => {
-    setTree((current) => ({
-      ...current,
-      todos: mergeGeneratedTodos(current.todos, incoming, current.people),
-    }));
+  const addTodo = useCallback(
+    (input: { personId: string; title: string; detail: string; priority: TodoPriority }) => {
+      setTree((current) => ({ ...current, todos: addTodoItem(current.todos, input) }));
+    },
+    [],
+  );
+
+  const removeTodo = useCallback((id: string) => {
+    setTree((current) => ({ ...current, todos: removeTodoItem(current.todos, id) }));
   }, []);
 
   const setTodoDone = useCallback((id: string, done: boolean) => {
@@ -850,7 +856,8 @@ export function useTreeStore() {
     setFlag,
     addPersonMedia,
     removePersonMedia,
-    replaceTodos,
+    addTodo,
+    removeTodo,
     setTodoDone,
     clearTodos,
     mergeGedcomTree,
