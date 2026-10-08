@@ -14,6 +14,10 @@ const LABELS: Record<string, string> = {
 
 export const UNKNOWN_KEY = "unknown";
 
+export function heritageLabel(key: string): string {
+  return key === UNKNOWN_KEY ? "Unknown" : (LABELS[key] ?? (countryNameFor(key) || key.toUpperCase()));
+}
+
 export function nationOf(person: Person): string | null {
   return flagCodeFor(person.nationality) ?? flagCodeFromPlace(person.birthPlace);
 }

@@ -12,8 +12,8 @@ import {
   ringRadii,
 } from "../tree/fan";
 import { countryNameFor, flagCodeFor, flagCodeFromPlace, flagUrl } from "../data/countries";
-import { nationOf, UNKNOWN_KEY } from "../tree/heritage";
-import { HERITAGE_COLOURS, otherColour } from "../tree/heritageColours";
+import { BRANCH_SWATCHES, ERAS, LIFESPANS, swatchFor, type FanColourMode, type Swatch } from "../tree/fanColours";
+import { nationOf } from "../tree/heritage";
 import { segmentLabel } from "../tree/fanLabel";
 import { PersonContextMenu, type RelativeKind } from "./PersonContextMenu";
 
@@ -22,26 +22,21 @@ const MAX_ZOOM = 1.75;
 const ZOOM_STEP = 0.15;
 const PANEL_WIDTH = 430;
 
-type ColourMode = "branch" | "heritage" | "generation";
 const MODE_KEY = "rootwork.fan.colour";
-const MODES: { id: ColourMode; label: string }[] = [
+const MODES: { id: FanColourMode; label: string }[] = [
   { id: "branch", label: "Branches" },
   { id: "heritage", label: "Heritage" },
-  { id: "generation", label: "Generations" },
+  { id: "era", label: "Era" },
+  { id: "lifespan", label: "Lifespan" },
 ];
 
-function loadMode(): ColourMode {
+function loadMode(): FanColourMode {
   try {
     const value = localStorage.getItem(MODE_KEY);
-    return value === "heritage" || value === "generation" ? value : "branch";
+    return value === "heritage" || value === "era" || value === "lifespan" ? value : "branch";
   } catch {
     return "branch";
   }
-}
-
-function heritageColour(person: Person) {
-  const key = nationOf(person) ?? UNKNOWN_KEY;
-  return HERITAGE_COLOURS[key] ?? { bg: otherColour(key), fg: "#ffffff" };
 }
 
 type View = { zoom: number; x: number; y: number };
@@ -114,7 +109,7 @@ export function FanChart({
   const [menu, setMenu] = useState<{ personId: string; x: number; y: number } | null>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
-  const [mode, setMode] = useState<ColourMode>(loadMode);
+  const [mode, setMode] = useState<FanColourMode>(loadMode);
   const [rootOverride, setRootOverride] = useState<string | null>(null);
   const [hover, setHover] = useState<{ person: Person; x: number; y: number } | null>(null);
 
@@ -240,7 +235,7 @@ export function FanChart({
   function handleCanvasPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 && event.button !== 1) return;
     const target = event.target as HTMLElement;
-    if (target.closest(".tree-zoom, .card-menu, .fan-seg, .fan-hub, .fan-more, .fan-modes")) return;
+    if (target.closest(".tree-zoom, .card-menu, .fan-seg, .fan-hub, .fan-more, .fan-modes, .fan-legend")) return;
     panRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -251,6 +246,43 @@ export function FanChart({
     setPanning(true);
     canvasRef.current?.setPointerCapture(event.pointerId);
   }
+
+  const legend = useMemo(() => {
+    const people_ = slots.flatMap((slot) => (slot.person ? [slot.person] : []));
+    if (mode === "branch") {
+      const name = (index: number) => {
+        const found = slots.find((slot) => slot.generation === 2 && slot.index === index)?.person;
+        return found ? displayName(found) : "";
+      };
+      const items = [
+        { key: "b0", label: "Father\u2019s father", detail: name(0), bg: BRANCH_SWATCHES[0] },
+        { key: "b1", label: "Father\u2019s mother", detail: name(1), bg: BRANCH_SWATCHES[1] },
+        { key: "b2", label: "Mother\u2019s father", detail: name(2), bg: BRANCH_SWATCHES[2] },
+        { key: "b3", label: "Mother\u2019s mother", detail: name(3), bg: BRANCH_SWATCHES[3] },
+      ];
+      return { title: "Branches", note: "Each grandparent\u2019s line has its own colour.", items };
+    }
+    const counts = new Map<string, number>();
+    const seen = new Map<string, Swatch>();
+    for (const person of people_) {
+      const sw = swatchFor(person, mode);
+      if (!sw) continue;
+      counts.set(sw.key, (counts.get(sw.key) ?? 0) + 1);
+      seen.set(sw.key, sw);
+    }
+    const base: Swatch[] =
+      mode === "era" ? ERAS : mode === "lifespan" ? LIFESPANS : [...seen.values()].sort((a, b) => (counts.get(b.key) ?? 0) - (counts.get(a.key) ?? 0));
+    const items = base
+      .filter((sw) => counts.has(sw.key))
+      .map((sw) => ({ key: sw.key, label: sw.label, detail: `${counts.get(sw.key)}`, bg: sw.bg }));
+    const titles = { heritage: "Heritage", era: "Born in", lifespan: "Age at death" } as const;
+    const notes = {
+      heritage: "From nationality, else birthplace.",
+      era: "Darker is older.",
+      lifespan: "How long each person lived.",
+    } as const;
+    return { title: titles[mode], note: notes[mode], items };
+  }, [slots, mode]);
 
   const zoomLabel = `${Math.round(view.zoom * 100)}%`;
 
@@ -289,15 +321,8 @@ export function FanChart({
               .join(" ");
             const nation = slot.person ? nationOf(slot.person) : null;
             const flagRoom = Boolean(nation) && metrics.ringW >= 64 && Math.abs(a0 - a1) * ((inner + outer) / 2) >= 48;
-            const palette = slot.person && mode === "heritage" ? heritageColour(slot.person) : null;
-            const fillStyle =
-              !slot.person || mode === "branch"
-                ? undefined
-                : palette
-                  ? { fill: palette.bg }
-                  : {
-                      fill: `color-mix(in srgb, var(--color-accent) ${Math.max(14, 62 - slot.generation * 8)}%, var(--color-surface))`,
-                    };
+            const palette = slot.person ? swatchFor(slot.person, mode) : null;
+            const fillStyle = palette ? { fill: palette.bg } : undefined;
             const textStyle = palette ? { fill: palette.fg } : undefined;
             const label = segmentLabel({
               person: slot.person,
@@ -499,6 +524,17 @@ export function FanChart({
           >
             {item.label}
           </button>
+        ))}
+      </div>
+      <div className={`fan-legend${panelOpen ? " is-panel-open" : ""}`} aria-label="Colour key">
+        <div className="fan-legend-title">{legend.title}</div>
+        <div className="fan-legend-note">{legend.note}</div>
+        {legend.items.map((item) => (
+          <div key={item.key} className="fan-legend-row">
+            <span className="fan-legend-swatch" style={{ background: item.bg }} />
+            <span className="fan-legend-label">{item.label}</span>
+            {item.detail && <span className="fan-legend-detail">{item.detail}</span>}
+          </div>
         ))}
       </div>
       {hover && (
