@@ -3,6 +3,7 @@ import { displayName, initials, yearsLabel, type Person } from "../data/people";
 import { IconMenu, IconPlus, IconSearch, IconSettings } from "../icons";
 
 type AppHeaderProps = {
+  phone?: boolean;
   title: string;
   people: Record<string, Person>;
   homePerson?: Person | null;
@@ -27,6 +28,7 @@ export function AppHeader({
   homePerson,
   peopleCountLabel,
   onToggleSidebar,
+  phone = false,
   onAddPerson,
   onOpenSettings,
   onLocatePerson,
@@ -89,6 +91,7 @@ export function AppHeader({
 
   return (
     <header className="app-header">
+      {!phone && (
       <button
         type="button"
         onClick={onToggleSidebar}
@@ -98,8 +101,9 @@ export function AppHeader({
       >
         <IconMenu />
       </button>
+      )}
       <h4>{title}</h4>
-      {peopleCountLabel && (
+      {peopleCountLabel && !phone && (
         <span className="tag tag-outline people-count">{peopleCountLabel}</span>
       )}
       <div className="header-spacer" />
@@ -143,7 +147,7 @@ export function AppHeader({
           </div>
         ) : null}
       </div>
-      {onAddPerson && (
+      {onAddPerson && !phone && (
         <button type="button" className="btn btn-primary add-person-btn" onClick={onAddPerson}>
           <IconPlus size={16} />
           Add person
@@ -158,13 +162,13 @@ export function AppHeader({
       >
         <IconSettings size={18} />
       </button>
-      <div
+      {!phone && <div
         className="user-avatar"
         title={homePerson ? displayName(homePerson) : undefined}
         aria-label={homePerson ? `Home person ${displayName(homePerson)}` : "No home person"}
       >
         {homePerson ? initials(homePerson) : "?"}
-      </div>
+      </div>}
     </header>
   );
 }

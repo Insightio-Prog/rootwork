@@ -35,10 +35,13 @@ import { useTreeStore, type PersonLink } from "./state/useTreeStore";
 import { flushStories, reloadStories, storyFor, useLifeStories } from "./stories";
 import { chartStorageKey } from "./state/workspaces";
 import { NAV_LABELS, useTreeUi } from "./state/useTreeUi";
+import { usePhone } from "./state/usePhone";
+import { PhoneTree } from "./components/PhoneTree";
 
 export default function App() {
   const store = useTreeStore();
   const ui = useTreeUi();
+  const phone = usePhone();
   useLifeStories();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -124,9 +127,10 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${phone ? " is-phone" : ""}`}>
       <Sidebar
-        collapsed={ui.collapsed}
+        phone={phone}
+        collapsed={phone ? false : ui.collapsed}
         nav={ui.nav}
         askOpen={askOpen}
         onNav={(id) => {
@@ -145,6 +149,7 @@ export default function App() {
       />
       <main className="app-main">
         <AppHeader
+          phone={phone}
           title={headerTitle}
           people={people}
           homePerson={homePersonId ? people[homePersonId] : undefined}
@@ -154,7 +159,17 @@ export default function App() {
           onOpenSettings={() => setSettingsOpen(true)}
           onLocatePerson={ui.locatePerson}
         />
-        {ui.nav === "tree" ? (
+        {ui.nav === "tree" && phone ? (
+          <PhoneTree
+            key={store.workspaces.currentId}
+            people={people}
+            homePersonId={homePersonId}
+            locateId={ui.locateId}
+            locateKey={ui.locateKey}
+            onOpenLifeStory={ui.openLifeStory}
+            onGoToBackup={() => ui.setNav("export")}
+          />
+        ) : ui.nav === "tree" ? (
           <>
             <ChartTabs tab={ui.tab} onTab={ui.setTab} />
             {ui.tab === "timeline" ? (
@@ -256,8 +271,8 @@ export default function App() {
             personId={ui.storyPersonId}
             onPick={ui.setStoryPersonId}
             onChangePerson={() => ui.setStoryPersonId(null)}
-            onCreateStory={() => setStoryLab({})}
-            onEditStory={(id) => setStoryLab({ personId: id })}
+            onCreateStory={phone ? undefined : () => setStoryLab({})}
+            onEditStory={phone ? undefined : (id) => setStoryLab({ personId: id })}
           />
         ) : ui.nav === "home" ? (
           <HomePage
@@ -316,6 +331,7 @@ export default function App() {
             people={people}
             onAddMedia={store.addPersonMedia}
             onRemoveMedia={store.removePersonMedia}
+            readOnly={phone}
           />
         ) : ui.nav === "todo" ? (
           <TodoPage

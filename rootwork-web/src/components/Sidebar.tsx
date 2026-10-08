@@ -22,6 +22,9 @@ const ITEMS: { id: NavId; icon: ReactNode }[] = [
   { id: "export", icon: <IconExport /> },
 ];
 
+const PHONE_ITEMS = new Set<NavId>(["home", "tree", "story", "media", "export"]);
+const PHONE_LABELS: Partial<Record<NavId, string>> = { tree: "Family", story: "Stories", export: "Backup" };
+
 type SidebarProps = {
   collapsed: boolean;
   nav: NavId;
@@ -29,6 +32,7 @@ type SidebarProps = {
   onNav: (id: NavId) => void;
   onAskClaude: () => void;
   todoOpenCount?: number;
+  phone?: boolean;
 };
 
 export function Sidebar({
@@ -38,9 +42,10 @@ export function Sidebar({
   onNav,
   onAskClaude,
   todoOpenCount = 0,
+  phone = false,
 }: SidebarProps) {
   return (
-    <aside className={`app-sidebar ${collapsed ? "is-collapsed" : "is-expanded"}`}>
+    <aside className={`app-sidebar ${collapsed ? "is-collapsed" : "is-expanded"}${phone ? " is-phone" : ""}`}>
       <div className="sidebar-brand">
         <div className="brand-mark">
           <BrandMark />
@@ -48,7 +53,7 @@ export function Sidebar({
         {!collapsed && <span className="brand-name">Rootwork</span>}
       </div>
 
-      {ITEMS.map((item) => (
+      {ITEMS.filter((item) => !phone || PHONE_ITEMS.has(item.id)).map((item) => (
         <Fragment key={item.id}>
           <button
             type="button"
@@ -58,7 +63,7 @@ export function Sidebar({
             aria-label={NAV_LABELS[item.id]}
           >
             {item.icon}
-            {!collapsed && <span className="nav-label">{NAV_LABELS[item.id]}</span>}
+            {!collapsed && <span className="nav-label">{(phone && PHONE_LABELS[item.id]) || NAV_LABELS[item.id]}</span>}
             {item.id === "todo" && !collapsed && todoOpenCount > 0 && (
               <span className="nav-badge">{todoOpenCount}</span>
             )}

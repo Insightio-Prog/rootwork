@@ -10,6 +10,7 @@ type MediaPageProps = {
   people: Record<string, Person>;
   onAddMedia: (personId: string, files: File[]) => void | Promise<void>;
   onRemoveMedia: (personId: string, mediaId: string) => void;
+  readOnly?: boolean;
 };
 
 function storyMedia(personId: string): MediaRef[] {
@@ -20,7 +21,7 @@ function storyMedia(personId: string): MediaRef[] {
   );
 }
 
-export function MediaPage({ people, onAddMedia, onRemoveMedia }: MediaPageProps) {
+export function MediaPage({ people, onAddMedia, onRemoveMedia, readOnly = false }: MediaPageProps) {
   const stories = useLifeStories();
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -58,12 +59,12 @@ export function MediaPage({ people, onAddMedia, onRemoveMedia }: MediaPageProps)
             <IconBack size={16} />
             All people
           </button>
-          <HiddenFileButton
+          {!readOnly && <HiddenFileButton
             label="Add photos"
             multiple
             className="btn btn-primary"
             onFiles={(files) => void onAddMedia(open.person.id, files)}
-          />
+          />}
         </div>
         <div className="media-folder-head">
           <PersonAvatar person={open.person} className={`person-mono is-folder is-${open.person.gender}`} />
@@ -89,7 +90,7 @@ export function MediaPage({ people, onAddMedia, onRemoveMedia }: MediaPageProps)
                     <MediaThumb media={file} className="media-tile-thumb" />
                     <span className="media-tile-name">{file.originalName || "File"}</span>
                   </button>
-                  {canRemove ? (
+                  {canRemove && !readOnly ? (
                     <button
                       type="button"
                       className="btn btn-icon media-tile-remove"
