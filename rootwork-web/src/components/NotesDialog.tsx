@@ -23,6 +23,7 @@ export function NotesDialog({ person, readOnly = false, onAdd, onUpdate, onRemov
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const addRef = useRef<HTMLTextAreaElement>(null);
   const canEdit = !readOnly && Boolean(onAdd);
 
@@ -111,15 +112,28 @@ export function NotesDialog({ person, readOnly = false, onAdd, onUpdate, onRemov
                         >
                           Edit
                         </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost add-rel-btn"
-                          onClick={() => {
-                            if (window.confirm("Delete this note?")) onRemove?.(note.id);
-                          }}
-                        >
-                          Delete
-                        </button>
+                        {confirmId === note.id ? (
+                          <>
+                            <span>Delete?</span>
+                            <button
+                              type="button"
+                              className="btn btn-ghost add-rel-btn"
+                              onClick={() => {
+                                onRemove?.(note.id);
+                                setConfirmId(null);
+                              }}
+                            >
+                              Yes
+                            </button>
+                            <button type="button" className="btn btn-ghost add-rel-btn" onClick={() => setConfirmId(null)}>
+                              No
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="btn btn-ghost add-rel-btn" onClick={() => setConfirmId(note.id)}>
+                            Delete
+                          </button>
+                        )}
                       </span>
                     )}
                   </div>
