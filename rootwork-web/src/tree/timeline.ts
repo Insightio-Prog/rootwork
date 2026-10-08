@@ -73,8 +73,18 @@ export function collectTimelineEvents(
 ): TimelineEvent[] {
   const active = lines.map(normalizeFamilyLine).filter(Boolean);
   if (active.length === 0) return [];
+  return collectEventsFor(
+    people,
+    Object.values(people).filter((person) => linesMatch(person.familyName, active)),
+  );
+}
 
-  const onLine = Object.values(people).filter((person) => linesMatch(person.familyName, active));
+/** Every dated event for everyone in `people` (used when following the tree view). */
+export function collectAllTimelineEvents(people: Record<string, Person>): TimelineEvent[] {
+  return collectEventsFor(people, Object.values(people));
+}
+
+function collectEventsFor(people: Record<string, Person>, onLine: Person[]): TimelineEvent[] {
   const onLineIds = new Set(onLine.map((person) => person.id));
   const events: TimelineEvent[] = [];
   const marriages = new Set<string>();

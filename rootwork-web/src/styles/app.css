@@ -3219,3 +3219,55 @@ body {
 .todo-add-row select { flex: 1 1 160px; width: auto; }
 .todo-item { display: flex; align-items: flex-start; gap: 8px; }
 .todo-item .todo-row { flex: 1; }
+
+/* Softer view tabs */
+.chart-tabs {
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-divider) 55%, transparent);
+}
+.chart-tab {
+  flex: none;
+  flex-direction: row;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--color-neutral-700);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.chart-tab:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); }
+.chart-tab.is-active {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent-800);
+}
+
+/* Hover labels on the floating toolbar */
+.chart-toolbar [data-tip] { position: relative; }
+.chart-toolbar [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 12px;
+  font-family: var(--font-body, inherit);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease 0.1s;
+  z-index: 10;
+}
+.chart-toolbar [data-tip]:hover::after,
+.chart-toolbar [data-tip]:focus-visible::after { opacity: 1; }
+
+/* Timeline source toggle */
+.timeline-mode { display: inline-flex; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.timeline-mode button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; color: var(--color-neutral-700); }
+.timeline-mode button.is-active { background: var(--color-surface); color: var(--color-accent-800); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)); }
+.chart-toolbar [data-tip]:first-child::after { left: 0; transform: none; }

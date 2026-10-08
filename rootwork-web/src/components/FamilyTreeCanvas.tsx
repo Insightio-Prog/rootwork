@@ -475,6 +475,7 @@ export function FamilyTreeCanvas({
           }}
           className="btn btn-icon toolbar-home"
           aria-label="Recenter on home person"
+          data-tip="Recentre on home person"
           disabled={!homePersonId}
         >
           <IconHome size={18} />
@@ -484,6 +485,7 @@ export function FamilyTreeCanvas({
           type="button"
           className={`btn btn-icon toolbar-icon${filtering ? " is-on" : ""}`}
           aria-label="Tree view"
+          data-tip="Tree view &amp; family lines"
           aria-expanded={Boolean(viewMenu)}
           disabled={!homePersonId}
           onClick={(event) => {
@@ -499,6 +501,7 @@ export function FamilyTreeCanvas({
           onClick={onTogglePanel}
           className="btn btn-icon toolbar-icon"
           aria-label="Toggle person panel"
+          data-tip="Show or hide person panel"
           disabled={!selected}
         >
           <IconPanel size={18} />
@@ -509,6 +512,7 @@ export function FamilyTreeCanvas({
               type="button"
               className="btn btn-icon toolbar-icon"
               aria-label="Chart settings"
+          data-tip="Chart settings"
               onClick={() => setSettingsOpen(true)}
             >
               <IconSettings size={18} />

@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { type Person } from "../data/people";
 import { timelineStorageKey } from "../state/workspaces";
+import { loadChartSettings } from "./FamilyTreeCanvas";
+import { peopleForFamilyLine } from "../tree/layout";
 import { IconClose, IconMinus, IconPlus } from "../icons";
 import {
   DEFAULT_FAMILY_LINES,
+  collectAllTimelineEvents,
   collectTimelineEvents,
   familyNamesInTree,
   linesMatch,
@@ -26,20 +29,22 @@ const STEM = 22;
 
 type TimelineSettings = {
   lines: string[];
+  /** "tree" follows whatever the Ancestor Tree is showing; "custom" uses the chips below. */
+  mode: "tree" | "custom";
 };
 
 function loadSettings(treeId: string): TimelineSettings {
-  if (!treeId) return { lines: [...DEFAULT_FAMILY_LINES] };
+  if (!treeId) return { lines: [...DEFAULT_FAMILY_LINES], mode: "tree" };
   try {
     const raw = localStorage.getItem(settingsKey(treeId));
-    if (!raw) return { lines: [...DEFAULT_FAMILY_LINES] };
+    if (!raw) return { lines: [...DEFAULT_FAMILY_LINES], mode: "tree" };
     const parsed = JSON.parse(raw) as Partial<TimelineSettings>;
     const lines = Array.isArray(parsed.lines)
       ? parsed.lines.map(normalizeFamilyLine).filter(Boolean)
       : [...DEFAULT_FAMILY_LINES];
-    return { lines: lines.length ? lines : [...DEFAULT_FAMILY_LINES] };
+    return { lines: lines.length ? lines : [...DEFAULT_FAMILY_LINES], mode: parsed.mode === "custom" ? "custom" : "tree" };
   } catch {
-    return { lines: [...DEFAULT_FAMILY_LINES] };
+    return { lines: [...DEFAULT_FAMILY_LINES], mode: "tree" };
   }
 }
 
@@ -60,9 +65,10 @@ function kindClass(kind: TimelineKind) {
 type TimelinePageProps = {
   treeId: string;
   people: Record<string, Person>;
+  homePersonId: string | null;
 };
 
-export function TimelinePage({ treeId, people }: TimelinePageProps) {
+export function TimelinePage({ treeId, people, homePersonId }: TimelinePageProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ pointerId: number; startX: number; originX: number } | null>(null);
   const [settings, setSettings] = useState(() => loadSettings(treeId));
@@ -74,7 +80,14 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
   const offsetRef = useRef(offsetX);
   zoomRef.current = zoom;
   offsetRef.current = offsetX;
-  const { lines } = settings;
+  const { lines, mode } = settings;
+  const followTree = mode === "tree";
+  const treeLines = useMemo(() => (treeId ? loadChartSettings(treeId).lineSurnames : []), [treeId]);
+  const viewPeople = useMemo(
+    () => (treeLines.length > 0 && homePersonId ? peopleForFamilyLine(people, treeLines, homePersonId) : people),
+    [people, treeLines, homePersonId],
+  );
+  const viewLabel = treeLines.length > 0 ? `${treeLines.join(" & ")} line` : "whole tree";
 
   useEffect(() => {
     if (!treeId) return;
@@ -85,7 +98,10 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
     };
   }, [treeId, settings]);
 
-  const events = useMemo(() => collectTimelineEvents(people, lines), [people, lines]);
+  const events = useMemo(
+    () => (followTree ? collectAllTimelineEvents(viewPeople) : collectTimelineEvents(people, lines)),
+    [followTree, viewPeople, people, lines],
+  );
   const surnames = useMemo(() => familyNamesInTree(people), [people]);
   const extraNames = surnames.filter((name) => !linesMatch(name, lines));
 
@@ -203,12 +219,13 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
   function addLine(name: string) {
     const line = normalizeFamilyLine(name);
     if (!line || linesMatch(line, lines)) return;
-    setSettings({ lines: [...lines, line] });
+    setSettings({ ...settings, lines: [...lines, line] });
     setAddOpen(false);
   }
 
   function removeLine(name: string) {
     setSettings({
+      ...settings,
       lines: lines.filter((line) => line.trim().toLowerCase() !== name.trim().toLowerCase()),
     });
   }
@@ -220,8 +237,24 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
   return (
     <section className="timeline-page">
       <div className="timeline-toolbar">
-        <span className="timeline-kicker">Family lines</span>
-        {lines.map((line) => (
+        <div className="timeline-mode" role="group" aria-label="Timeline source">
+          <button
+            type="button"
+            className={followTree ? "is-active" : ""}
+            onClick={() => setSettings({ ...settings, mode: "tree" })}
+          >
+            Follow tree view
+          </button>
+          <button
+            type="button"
+            className={followTree ? "" : "is-active"}
+            onClick={() => setSettings({ ...settings, mode: "custom" })}
+          >
+            Pick lines
+          </button>
+        </div>
+        {followTree && <span className="timeline-kicker">Showing the {viewLabel}</span>}
+        {!followTree && lines.map((line) => (
           <span key={line} className="timeline-chip">
             {line}
             <button type="button" aria-label={`Remove ${line}`} onClick={() => removeLine(line)}>
@@ -229,7 +262,7 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
             </button>
           </span>
         ))}
-        {extraNames.length > 0 && (
+        {!followTree && extraNames.length > 0 && (
           <div className="timeline-add">
             {addOpen ? (
               <select
@@ -275,7 +308,9 @@ export function TimelinePage({ treeId, people }: TimelinePageProps) {
             <div className="timeline-empty-kicker">Timeline</div>
             <h3>No dated events yet</h3>
             <p>
-              {lines.length === 0
+              {followTree
+                ? `Add birth, marriage, or death dates for the ${viewLabel}.`
+                : lines.length === 0
                 ? "Add a family line to plot births, marriages, and deaths."
                 : `Add birth, marriage, or death dates for the ${lines.join(" and ")} line${lines.length === 1 ? "" : "s"}.`}
             </p>

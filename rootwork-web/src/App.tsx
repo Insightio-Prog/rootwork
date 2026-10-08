@@ -158,7 +158,7 @@ export default function App() {
           <>
             <ChartTabs tab={ui.tab} onTab={ui.setTab} />
             {ui.tab === "timeline" ? (
-              <TimelinePage key={store.workspaces.currentId} treeId={store.workspaces.currentId} people={people} />
+              <TimelinePage key={store.workspaces.currentId} treeId={store.workspaces.currentId} people={people} homePersonId={homePersonId} />
             ) : (
               <FamilyTreeCanvas
                 key={store.workspaces.currentId}
