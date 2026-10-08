@@ -64,6 +64,7 @@ export function mapGedcomPeople(text: string): Record<string, Person> {
   const families = indexByTag(roots, "FAM");
   const sources = indexByTag(roots, "SOUR");
   const people: Record<string, Person> = {};
+  livingFlagged.clear();
   for (const [xref, node] of individuals) {
     people[xref] = mapIndividual(xref, node, sources);
   }
@@ -90,7 +91,7 @@ function mapIndividual(xref: string, node: GedNode, sources: Map<string, GedNode
   const birth = child(node, "BIRT");
   const death = child(node, "DEAT");
   const deceasedFacts = ["BURI", "PROB"].some((tag) => child(node, tag));
-  const living = isLiving(node, factDate(birth), Boolean(death) || deceasedFacts);
+  const living = isLiving(node, factDate(birth) || factDate(child(node, "BAPM")), Boolean(death) || deceasedFacts);
   const person = createPerson({
     givenName: name.given,
     familyName: name.family,
@@ -112,40 +113,65 @@ function mapIndividual(xref: string, node: GedNode, sources: Map<string, GedNode
     ...children(node, "EMIG"),
     ...children(node, "PROB"),
     ...children(node, "MARB"),
-  ].flatMap((item) => mapEvent(item, sources));
+  ].flatMap((item) => mapEvent(item));
 
-  // Things the tree has no dedicated field for are kept as notable events so nothing is lost.
-  const extras: Person["notableEvents"] = [];
+  // Things the tree has no event for go in their own fields: alternate names, notes and source links.
   for (const other of names) {
     if (other === primary) continue;
     const text = displayGedName(other);
-    if (text && text.toLowerCase() !== displayGedName(primary).toLowerCase()) {
-      extras.push(createNotableEvent("Also known as", "", text));
+    if (text && text.toLowerCase() !== displayGedName(primary).toLowerCase() && !person.altNames.includes(text)) {
+      person.altNames.push(text);
     }
   }
+  const noteParts: string[] = [];
   const suffix = concatText(child(primary, "NSFX")).trim();
-  if (suffix) extras.push(createNotableEvent("Name suffix", "", suffix));
-  const cause = concatText(child(death, "CAUS")).trim();
-  if (cause) extras.push(createNotableEvent("Cause of death", factDate(death), cause));
+  if (suffix) noteParts.push(`Name suffix: ${suffix}`);
   for (const note of children(node, "NOTE")) {
     const text = concatText(note).trim();
-    if (text && !pointer(text)) extras.push(createNotableEvent("Note", "", text));
+    if (text && !pointer(text)) noteParts.push(text);
   }
-  const lines = new Set<string>();
-  const collect = (label: string, owner: GedNode | undefined) => {
-    if (!owner) return;
-    for (const cite of children(owner, "SOUR")) {
-      const line = citationLine(cite, sources);
-      if (line) lines.add(label ? `${label}: ${line}` : line);
+  person.notes = noteParts.join("\n\n");
+  const cause = concatText(child(death, "CAUS")).trim();
+  if (cause) person.notableEvents.push(createNotableEvent("Cause of death", factDate(death), cause));
+  person.sources = collectSources(node, sources);
+  if (explicitlyLiving(node)) livingFlagged.add(xref);
+  return person;
+}
+
+/** People Findmypast explicitly marks as living - the deceased inference below must not touch them. */
+const livingFlagged = new Set<string>();
+
+function explicitlyLiving(node: GedNode): boolean {
+  return Boolean(child(node, "_LIV"));
+}
+
+/** Every record the person is cited from, as short titled links, without repeats. */
+function collectSources(root: GedNode, sources: Map<string, GedNode>, into: Person["sources"] = []): Person["sources"] {
+  const seen = new Set(into.map((item) => item.url || item.title));
+  const walk = (node: GedNode) => {
+    for (const item of node.children) {
+      if (item.tag === "SOUR") {
+        const link = citationLink(item, sources);
+        const key = link ? link.url || link.title : "";
+        if (link && !seen.has(key)) {
+          seen.add(key);
+          into.push(link);
+        }
+      } else {
+        walk(item);
+      }
     }
   };
-  collect("Record", node);
-  collect("Name", primary);
-  collect("Birth", birth);
-  collect("Death", death);
-  if (lines.size) extras.push(createNotableEvent("Sources", "", [...lines].slice(0, 14).join("\n")));
-  person.notableEvents.push(...extras);
-  return person;
+  walk(root);
+  return into.slice(0, 40);
+}
+
+function citationLink(cite: GedNode, sources: Map<string, GedNode>): Person["sources"][number] | null {
+  const source = sources.get(pointer(cite.value) ?? "");
+  const title = (concatText(child(source, "TITL")) || concatText(child(source, "ABBR"))).trim();
+  const url = concatText(child(cite, "REF")).trim();
+  if (!title && !url) return null;
+  return { id: crypto.randomUUID(), title: title || "Source record", url: /^https?:/i.test(url) ? url : "" };
 }
 
 function displayGedName(node: GedNode | undefined): string {
@@ -162,15 +188,6 @@ function isLiving(node: GedNode, birth: string, hasDeathFact: boolean): boolean 
   const year = parseYear(birth);
   if (year !== null && new Date().getFullYear() - year > 100) return false;
   return true;
-}
-
-function citationLine(cite: GedNode, sources: Map<string, GedNode>): string {
-  const source = sources.get(pointer(cite.value) ?? "");
-  const title = (concatText(child(source, "TITL")) || concatText(child(source, "ABBR"))).trim();
-  const page = concatText(child(cite, "PAGE")).trim();
-  const ref = concatText(child(cite, "REF")).trim();
-  const detail = page && !title.toLowerCase().includes(page.toLowerCase()) ? page.slice(0, 160) : "";
-  return [title, detail, ref].filter(Boolean).join(" - ");
 }
 
 function applyFamilies(
@@ -201,21 +218,18 @@ function applyFamilies(
       people[wife].marriages[husb] = { date, place };
     }
 
-    const marriageLines = marr
-      ? children(marr, "SOUR")
-          .map((cite) => citationLine(cite, sources))
-          .filter(Boolean)
-      : [];
-    const banns = children(node, "MARB").flatMap((item) => mapEvent(item, sources));
+    const marriageSources = collectSources(node, sources);
+    const banns = children(node, "MARB").flatMap((item) => mapEvent(item));
     for (const spouseId of parents) {
       const spouse = people[spouseId];
       const otherId = parents.find((id) => id !== spouseId);
       const other = otherId ? people[otherId] : undefined;
-      const withName = (title: string) => (other ? `${title} (to ${[other.givenName, other.familyName].join(" ").trim()})` : title);
-      for (const event of banns) spouse.notableEvents.push({ ...event, id: crypto.randomUUID(), title: withName(event.title) });
-      if (marriageLines.length) {
-        spouse.notableEvents.push(createNotableEvent(withName("Marriage sources"), date, marriageLines.join("\n")));
+      const withName = (title: string) =>
+        other ? `${title} (to ${[other.givenName, other.familyName].join(" ").trim()})` : title;
+      for (const event of banns) {
+        spouse.notableEvents.push({ ...event, id: crypto.randomUUID(), title: withName(event.title) });
       }
+      spouse.sources = mergeSourceLists(spouse.sources, marriageSources);
     }
 
     for (const childId of kids) {
@@ -228,6 +242,41 @@ function applyFamilies(
         continue;
       }
       person.parentIds = uniqueIds([...person.parentIds, ...parents]).slice(0, 2);
+    }
+  }
+  inferDeceasedAncestors(people);
+}
+
+function mergeSourceLists(a: Person["sources"], b: Person["sources"]): Person["sources"] {
+  const seen = new Set(a.map((item) => item.url || item.title));
+  const out = [...a];
+  for (const item of b) {
+    const key = item.url || item.title;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ...item, id: crypto.randomUUID() });
+  }
+  return out.slice(0, 40);
+}
+
+/** Nobody is a living parent of a dead person, or of someone old enough to be dead themselves. */
+function inferDeceasedAncestors(people: Record<string, Person>) {
+  const year = new Date().getFullYear();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const person of Object.values(people)) {
+      for (const parentId of person.parentIds) {
+        const parent = people[parentId];
+        if (!parent || !parent.living || livingFlagged.has(parentId)) continue;
+        const born = parseYear(person.birth);
+        if (!person.living || (born !== null && year - born > 80)) {
+          parent.living = false;
+          parent.death = "";
+          parent.deathPlace = "";
+          changed = true;
+        }
+      }
     }
   }
 }
@@ -290,7 +339,7 @@ function warFromNote(note: string): string {
   return note.split(/[.!]/)[0]?.trim().slice(0, 80) ?? note.slice(0, 80);
 }
 
-function mapEvent(node: GedNode, sources: Map<string, GedNode>): Person["notableEvents"] {
+function mapEvent(node: GedNode): Person["notableEvents"] {
   const type = concatText(child(node, "TYPE")).trim();
   const page = concatText(child(children(node, "SOUR")[0], "PAGE")).trim();
   const title =
@@ -300,10 +349,7 @@ function mapEvent(node: GedNode, sources: Map<string, GedNode>): Person["notable
   const date = factDate(node);
   const place = factPlace(node);
   const note = children(node, "NOTE").map(concatText).join("\n").trim();
-  const cites = children(node, "SOUR")
-    .map((cite) => citationLine(cite, sources))
-    .filter(Boolean);
-  const detail = [place, note, ...new Set(cites)].filter(Boolean).join("\n");
+  const detail = [place, note].filter(Boolean).join("\n");
   return [createNotableEvent(title, date, detail)];
 }
 

@@ -17,7 +17,8 @@ const RESULT_LIMIT = 8;
 
 function nameMatches(person: Person, needle: string) {
   if (!needle) return false;
-  return displayName(person).toLowerCase().includes(needle);
+  if (displayName(person).toLowerCase().includes(needle)) return true;
+  return (person.altNames ?? []).some((name) => name.toLowerCase().includes(needle));
 }
 
 export function AppHeader({

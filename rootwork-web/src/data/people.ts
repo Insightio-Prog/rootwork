@@ -59,6 +59,12 @@ export type Marriage = {
   place: string;
 };
 
+export type SourceLink = {
+  id: string;
+  title: string;
+  url: string;
+};
+
 export type Person = {
   id: string;
   givenName: string;
@@ -79,6 +85,9 @@ export type Person = {
   photo: MediaRef | null;
   flag: MediaRef | null;
   media: MediaRef[];
+  notes: string;
+  altNames: string[];
+  sources: SourceLink[];
 };
 
 export type PersonDraft = {
@@ -128,6 +137,9 @@ export function createPerson(draft: PersonDraft): Person {
     photo: null,
     flag: null,
     media: [],
+    notes: "",
+    altNames: [],
+    sources: [],
   };
 }
 
@@ -801,6 +813,9 @@ export function normalizePerson(
     | "photo"
     | "flag"
     | "media"
+    | "notes"
+    | "altNames"
+    | "sources"
   > & {
     living?: boolean;
     residences?: Residence[];
@@ -811,6 +826,9 @@ export function normalizePerson(
     photo?: MediaRef | null;
     flag?: MediaRef | null;
     media?: MediaRef[];
+    notes?: string;
+    altNames?: string[];
+    sources?: SourceLink[];
   },
 ): Person {
   const living =
@@ -857,5 +875,22 @@ export function normalizePerson(
     photo,
     flag,
     media,
+    notes: typeof person.notes === "string" ? person.notes : "",
+    altNames: Array.isArray(person.altNames)
+      ? person.altNames.filter((name): name is string => typeof name === "string" && Boolean(name.trim()))
+      : [],
+    sources: normalizeSources(person.sources),
   };
+}
+
+function normalizeSources(value: unknown): SourceLink[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const raw = item as Partial<SourceLink>;
+    const title = typeof raw.title === "string" ? raw.title.trim() : "";
+    const url = typeof raw.url === "string" ? raw.url.trim() : "";
+    if (!title && !url) return [];
+    return [{ id: typeof raw.id === "string" && raw.id ? raw.id : crypto.randomUUID(), title: title || url, url }];
+  });
 }

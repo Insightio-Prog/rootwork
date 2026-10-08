@@ -295,6 +295,8 @@ function mergeMatchedPerson(
     spouseIds: [...dest.spouseIds],
     residences: dest.residences.map((item) => ({ ...item })),
     notableEvents: dest.notableEvents.map((item) => ({ ...item })),
+    altNames: [...(dest.altNames ?? [])],
+    sources: (dest.sources ?? []).map((item) => ({ ...item })),
     jobs: dest.jobs.map((item) => ({ ...item })),
     military: dest.military.map((item) => ({
       ...item,
@@ -357,6 +359,17 @@ function mergeMatchedPerson(
   const events = mergeEvents(next.notableEvents, incoming.notableEvents);
   next.notableEvents = events.list;
   filled = events.added || filled;
+  const altNames = [...new Set([...(next.altNames ?? []), ...(incoming.altNames ?? [])])];
+  if (altNames.length !== (next.altNames ?? []).length) filled = true;
+  next.altNames = altNames;
+  const known = new Set((next.sources ?? []).map((item) => item.url || item.title));
+  const newSources = (incoming.sources ?? []).filter((item) => !known.has(item.url || item.title));
+  if (newSources.length) filled = true;
+  next.sources = [...(next.sources ?? []), ...newSources.map((item) => ({ ...item, id: crypto.randomUUID() }))];
+  if (!next.notes?.trim() && incoming.notes?.trim()) {
+    next.notes = incoming.notes;
+    filled = true;
+  }
   const military = mergeMilitary(next.military, incoming.military);
   next.military = military.list;
   filled = military.added || filled;
@@ -668,6 +681,8 @@ function remapPerson(person: Person): Person {
     id: crypto.randomUUID(),
     residences: person.residences.map(cloneResidence),
     notableEvents: person.notableEvents.map(cloneEvent),
+    altNames: [...(person.altNames ?? [])],
+    sources: (person.sources ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     jobs: person.jobs.map((job) => ({ ...job, id: crypto.randomUUID() })),
     military: person.military.map(cloneMilitary),
     media: [...(person.media ?? [])],

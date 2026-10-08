@@ -207,6 +207,55 @@ export function LifeSection({
           </div>
         </div>
 
+        {(person.altNames?.length ?? 0) > 0 && (
+          <div className="life-item">
+            <div className="life-copy">
+              <div className="life-kicker">Also known as</div>
+              {person.altNames.map((name) => (
+                <div className="vital-date" key={name}>
+                  {name}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {person.notes?.trim() ? (
+          <div className="life-item">
+            <div className="life-copy">
+              <div className="life-kicker">Notes</div>
+              <div className="vital-place note-text">{person.notes}</div>
+            </div>
+          </div>
+        ) : null}
+
+        {(person.sources?.length ?? 0) > 0 && (
+          <div className="life-item is-stack">
+            <div className="life-copy">
+              <div className="life-kicker">Sources</div>
+              <div className="source-list">
+                {person.sources.map((source) =>
+                  source.url ? (
+                    <a
+                      key={source.id}
+                      className="source-link"
+                      href={source.url.replace(/^http:\/\/(search\.findmypast)/, "https://$1")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {source.title} ↗
+                    </a>
+                  ) : (
+                    <div key={source.id} className="vital-place">
+                      {source.title}
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="life-item">
           <div className="life-copy">
             <div className="life-kicker-row">
