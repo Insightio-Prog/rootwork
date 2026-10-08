@@ -3421,3 +3421,6 @@ body {
 .phone-picker-list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; -webkit-overflow-scrolling: touch; }
 .phone-picker-hint { margin: 8px 4px; font-size: 13px; color: var(--color-neutral-700); }
 .phone-fan-home { position: absolute; left: 10px; top: 62px; z-index: 5; border: 1px solid var(--color-divider); background: var(--color-surface); color: var(--color-accent-800); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12.5px; cursor: pointer; box-shadow: var(--shadow-md); }
+
+.share-link-row { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; font-size: 12.5px; color: var(--color-neutral-700); }
+.share-link-row code { display: block; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); overflow-wrap: anywhere; user-select: all; }

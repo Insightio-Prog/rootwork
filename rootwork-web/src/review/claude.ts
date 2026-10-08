@@ -1,6 +1,6 @@
 const PASSWORD_KEY = "rootwork.ai.password";
 
-function storedPassword(): string {
+export function storedPassword(): string {
   try {
     return localStorage.getItem(PASSWORD_KEY) ?? "";
   } catch {

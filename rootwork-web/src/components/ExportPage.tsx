@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DuplicateMergeReport, GedcomImportReport } from "../import/mergeGedcom";
 import { downloadBlob, makeBackupBlob, makeViewerHtml, readGedcomFile, restoreBackup } from "../backup/web";
 import { clearMediaUrlCache } from "../media/store";
-import { invokeErrorMessage } from "../review/claude";
+import { invokeErrorMessage, saveApiKey, storedPassword } from "../review/claude";
+import { publishShare, shareStatus, shareUrl, stopShare, type ShareStatus } from "../export/share";
 
 type ExportPageProps = {
   onPrepareExport: () => Promise<void>;
@@ -46,6 +47,79 @@ export function ExportPage({
   const [confirmImport, setConfirmImport] = useState(false);
   const [gedcomReport, setGedcomReport] = useState<GedcomImportReport | null>(null);
   const [mergeReport, setMergeReport] = useState<DuplicateMergeReport | null>(null);
+  const [unlocked, setUnlocked] = useState(() => Boolean(storedPassword()));
+  const [passwordDraft, setPasswordDraft] = useState("");
+  const [share, setShare] = useState<ShareStatus | null>(null);
+  const [shareBusy, setShareBusy] = useState("");
+  const [shareError, setShareError] = useState("");
+  const [shareNote, setShareNote] = useState("");
+
+  useEffect(() => {
+    if (!unlocked) return;
+    shareStatus()
+      .then(setShare)
+      .catch((err) => setShareError(invokeErrorMessage(err)));
+  }, [unlocked]);
+
+  async function handleUnlock() {
+    setShareError("");
+    setShareBusy("unlock");
+    try {
+      await saveApiKey(passwordDraft);
+      setPasswordDraft("");
+      setUnlocked(true);
+    } catch (err) {
+      setShareError(invokeErrorMessage(err));
+    } finally {
+      setShareBusy("");
+    }
+  }
+
+  async function handlePublish(rotate: boolean) {
+    setShareError("");
+    setShareNote("");
+    setShareBusy("publish");
+    try {
+      await onPrepareExport();
+      const charts = await onPrepareHtmlExport();
+      setShareNote("Preparing the family page…");
+      const html = await makeViewerHtml(charts);
+      const status = await publishShare(html, rotate, (done, total) =>
+        setShareNote(`Uploading… ${Math.min(done, total)} of ${total}`),
+      );
+      setShare(status);
+      setShareNote(status.shared ? `Published (${formatBytes(html.size)}). The link is ready to copy.` : "");
+    } catch (err) {
+      setShareError(invokeErrorMessage(err));
+      setShareNote("");
+    } finally {
+      setShareBusy("");
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!share || !share.shared) return;
+    const link = shareUrl(share.token);
+    try {
+      await navigator.clipboard.writeText(link);
+      setShareNote("Link copied. Paste it into a message.");
+    } catch {
+      setShareNote(link);
+    }
+  }
+
+  async function handleStopShare() {
+    setShareError("");
+    setShareBusy("stop");
+    try {
+      setShare(await stopShare());
+      setShareNote("Sharing stopped. The old link no longer works.");
+    } catch (err) {
+      setShareError(invokeErrorMessage(err));
+    } finally {
+      setShareBusy("");
+    }
+  }
 
   async function handleExport() {
     setError("");
@@ -206,6 +280,70 @@ export function ExportPage({
               {busy === "merge" ? "Merging" : "Merge duplicate people"}
             </button>
           </div>
+        </div>
+        <div className="card elev-md placeholder-card">
+          <div className="placeholder-kicker">Share</div>
+          <h3>Share one link</h3>
+          <p>
+            Publish a view-only copy of every tree, the stories and the photos, and send family one
+            link. It works on phones and computers, and nothing needs importing. Publish again later
+            and the same link shows the latest. Anyone who has the link can look, so only send it to family.
+          </p>
+          {!unlocked ? (
+            <div className="export-actions">
+              <input
+                type="password"
+                className="input"
+                value={passwordDraft}
+                placeholder="Family password"
+                aria-label="Family password"
+                autoComplete="off"
+                onChange={(event) => setPasswordDraft(event.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!passwordDraft.trim() || shareBusy === "unlock"}
+                onClick={() => void handleUnlock()}
+              >
+                {shareBusy === "unlock" ? "Checking" : "Unlock"}
+              </button>
+            </div>
+          ) : (
+            <>
+              {share && share.shared ? (
+                <p className="share-link-row">
+                  <code>{shareUrl(share.token)}</code>
+                  <span>Last published {new Date(share.updatedAt).toLocaleString()}</span>
+                </p>
+              ) : null}
+              <div className="export-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={Boolean(busy) || Boolean(shareBusy)}
+                  onClick={() => void handlePublish(false)}
+                >
+                  {shareBusy === "publish" ? "Publishing…" : share && share.shared ? "Update the link" : "Publish a link"}
+                </button>
+                {share && share.shared ? (
+                  <>
+                    <button type="button" className="btn btn-secondary" disabled={Boolean(shareBusy)} onClick={() => void handleCopyLink()}>
+                      Copy link
+                    </button>
+                    <button type="button" className="btn btn-secondary" disabled={Boolean(busy) || Boolean(shareBusy)} onClick={() => void handlePublish(true)}>
+                      New link (stops the old one)
+                    </button>
+                    <button type="button" className="btn btn-secondary" disabled={Boolean(shareBusy)} onClick={() => void handleStopShare()}>
+                      Stop sharing
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </>
+          )}
+          {shareNote ? <p className="export-status">{shareNote}</p> : null}
+          {shareError ? <p className="export-error">{shareError}</p> : null}
         </div>
         <div className="card elev-md placeholder-card">
           <div className="placeholder-kicker">Share</div>
