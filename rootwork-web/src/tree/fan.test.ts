@@ -29,7 +29,7 @@ describe("fan layout", () => {
       const s = slots.find((slot) => slot.person?.id === id)!;
       return s.a0 - s.a1;
     };
-    expect(width("dad")).toBeCloseTo(width("mum"), 5); // parents share the half-turn evenly
+    expect(width("dad")).toBeGreaterThan(width("mum")); // the side with more ancestors gets more room
     const stub = slots.find((s) => !s.person && s.generation === 2 && s.childId === "mum")!;
     expect(stub.a0 - stub.a1).toBeLessThan(width("gdad") * 2);
     const ring3 = slots.filter((s) => s.generation === 3).sort((a, b) => b.mid - a.mid);

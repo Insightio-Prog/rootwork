@@ -162,9 +162,10 @@ export function buildFanSlots(
     }
   }
 
-  // Parents split the half-turn evenly so father and mother sides stay balanced.
-  place(top[0], FAN_START, FAN_SPAN / 2);
-  place(top[1], FAN_START - FAN_SPAN / 2, FAN_SPAN / 2);
+  // The two sides share the half-turn by how much each holds, but neither is ever squeezed below a fifth.
+  const fatherShare = Math.min(0.8, Math.max(0.2, top[0].weight / (top[0].weight + top[1].weight)));
+  place(top[0], FAN_START, FAN_SPAN * fatherShare);
+  place(top[1], FAN_START - FAN_SPAN * fatherShare, FAN_SPAN * (1 - fatherShare));
   return slots;
 }
 

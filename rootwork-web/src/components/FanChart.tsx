@@ -5,8 +5,6 @@ import {
   branchClass,
   buildFanSlots,
   donutPath,
-  FAN_SPAN,
-  FAN_START,
   FAN_MAX_GENERATIONS,
   fanMetrics,
   fanRingsNeeded,
@@ -255,7 +253,6 @@ export function FanChart({
   }
 
   const zoomLabel = `${Math.round(view.zoom * 100)}%`;
-  const plate = donutPath(metrics.cx, metrics.cy, metrics.hubR, metrics.maxR, FAN_START, FAN_START - FAN_SPAN);
 
   if (!home) return null;
 
@@ -275,7 +272,6 @@ export function FanChart({
           height={metrics.height}
           viewBox={`0 0 ${metrics.width} ${metrics.height}`}
         >
-          <path className="fan-plate" d={plate} />
           {slots.map((slot) => {
             const { inner, outer } = ringRadii(metrics, slot.generation);
             const { a0, a1, mid } = slot;
