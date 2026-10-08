@@ -72,6 +72,11 @@ export function AskClaudeDialog({
           people,
           homePersonId,
           selectedPersonId,
+          question: nextMessages
+            .filter((turn) => turn.role === "user")
+            .slice(-3)
+            .map((turn) => turn.content)
+            .join("\n"),
         }),
         messages: nextMessages,
       });
