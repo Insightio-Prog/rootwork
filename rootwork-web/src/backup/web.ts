@@ -62,7 +62,7 @@ export async function makeBackupBlob(): Promise<Blob> {
 }
 
 /** Writes a backup file into the current tree. Caller reloads tree and stories after. */
-export async function restoreBackup(file: File): Promise<void> {
+export async function restoreBackup(file: Blob): Promise<void> {
   let entries: Record<string, Uint8Array>;
   try {
     entries = unzipSync(new Uint8Array(await file.arrayBuffer()));

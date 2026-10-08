@@ -3,6 +3,8 @@ import type { DuplicateMergeReport, GedcomImportReport } from "../import/mergeGe
 import { downloadBlob, makeBackupBlob, makeViewerHtml, readGedcomFile, restoreBackup } from "../backup/web";
 import { clearMediaUrlCache } from "../media/store";
 import { invokeErrorMessage, saveApiKey, storedPassword } from "../review/claude";
+import { usePhone } from "../state/usePhone";
+import { fullLayoutOn, isSharedCopy, setFullLayout } from "../share/info";
 import { publishShare, shareStatus, shareUrl, stopShare, type ShareStatus } from "../export/share";
 
 type ExportPageProps = {
@@ -41,6 +43,7 @@ export function ExportPage({
   onImportGedcom,
   onCollapseDuplicates,
 }: ExportPageProps) {
+  const phone = usePhone();
   const [busy, setBusy] = useState<"export" | "html" | "import" | "gedcom" | "merge" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -81,9 +84,8 @@ export function ExportPage({
     setShareBusy("publish");
     try {
       await onPrepareExport();
-      const charts = await onPrepareHtmlExport();
-      setShareNote("Preparing the family page…");
-      const html = await makeViewerHtml(charts);
+      setShareNote("Preparing the family backup…");
+      const html = await makeBackupBlob();
       const status = await publishShare(html, rotate, (done, total) =>
         setShareNote(`Uploading… ${Math.min(done, total)} of ${total}`),
       );
@@ -223,7 +225,7 @@ export function ExportPage({
   }
 
   return (
-    <section className="placeholder-page">
+    <section className="placeholder-page export-page">
       <div className="export-page-stack">
         <div className="card elev-md placeholder-card">
           <div className="placeholder-kicker">Export</div>
@@ -281,13 +283,16 @@ export function ExportPage({
             </button>
           </div>
         </div>
+        {!isSharedCopy ? (
         <div className="card elev-md placeholder-card">
           <div className="placeholder-kicker">Share</div>
           <h3>Share one link</h3>
           <p>
-            Publish a view-only copy of every tree, the stories and the photos, and send family one
-            link. It works on phones and computers, and nothing needs importing. Publish again later
-            and the same link shows the latest. Anyone who has the link can look, so only send it to family.
+            Publish this tree, its stories and photos, and send family one link. It opens the full
+            Rootwork (everything except the map) with the tree already loaded on their own phone or
+            computer. What they add stays on their device, and they can export a backup and send it
+            back to you. Publish again later and the same link shows the latest. Anyone who has the
+            link can open it, so only send it to family.
           </p>
           {!unlocked ? (
             <div className="export-actions">
@@ -345,6 +350,7 @@ export function ExportPage({
           {shareNote ? <p className="export-status">{shareNote}</p> : null}
           {shareError ? <p className="export-error">{shareError}</p> : null}
         </div>
+        ) : null}
         <div className="card elev-md placeholder-card">
           <div className="placeholder-kicker">Share</div>
           <h3>Share as webpage</h3>
@@ -363,6 +369,29 @@ export function ExportPage({
             </button>
           </div>
         </div>
+        {phone || fullLayoutOn() ? (
+          <div className="card elev-md placeholder-card">
+            <div className="placeholder-kicker">Layout</div>
+            <h3>{fullLayoutOn() ? "Full version is on" : "Use the full version"}</h3>
+            <p>
+              {fullLayoutOn()
+                ? "You're seeing the desktop layout. Switch back for the simpler phone view."
+                : "Switch this phone to the desktop layout so you can add and edit people. Everything looks smaller, so pinch to zoom."}
+            </p>
+            <div className="export-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setFullLayout(!fullLayoutOn());
+                  window.location.reload();
+                }}
+              >
+                {fullLayoutOn() ? "Back to phone layout" : "Use full version"}
+              </button>
+            </div>
+          </div>
+        ) : null}
         {message ? <p className="export-status">{message}</p> : null}
         {error ? <p className="export-error">{error}</p> : null}
       </div>

@@ -11,6 +11,7 @@ import {
   IconTasks,
   IconTree,
 } from "../icons";
+import { isSharedCopy } from "../share/info";
 import { NAV_LABELS, type NavId } from "../state/useTreeUi";
 
 const ITEMS: { id: NavId; icon: ReactNode }[] = [
@@ -55,7 +56,7 @@ export function Sidebar({
         {!collapsed && <span className="brand-name">Rootwork</span>}
       </div>
 
-      {ITEMS.filter((item) => (phone ? PHONE_ITEMS.has(item.id) : item.id !== "fan")).map((item) => (
+      {ITEMS.filter((item) => !(isSharedCopy && item.id === "map")).filter((item) => (phone ? PHONE_ITEMS.has(item.id) : item.id !== "fan")).map((item) => (
         <Fragment key={item.id}>
           <button
             type="button"

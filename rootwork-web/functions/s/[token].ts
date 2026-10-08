@@ -1,11 +1,13 @@
 // Cloudflare Pages Function: GET /s/<token>
-// Serves the shared view-only family page stored by /api/share.
+// Serves the shared family page stored by /api/share.
+// New shares (kind zip) open the real Rootwork app with the share details injected;
+// the family data comes from /s/<token>/data. Older shares were a single view-only HTML page.
 
 type KV = {
   get(key: string, type: "text"): Promise<string | null>;
   get(key: string, type: "arrayBuffer"): Promise<ArrayBuffer | null>;
 };
-type Env = { SHARE?: KV };
+type Env = { SHARE?: KV; ASSETS?: { fetch(request: Request | string): Promise<Response> } };
 type Ctx = {
   request: Request;
   env: Env;
@@ -24,13 +26,13 @@ function page(message: string, status: number) {
   return new Response(html, { status, headers: { ...BASE_HEADERS, "content-type": "text/html; charset=utf-8" } });
 }
 
-export async function onRequestGet({ env, params, waitUntil }: Ctx): Promise<Response> {
+export async function onRequestGet({ request, env, params, waitUntil }: Ctx): Promise<Response> {
   const kv = env.SHARE;
   if (!kv) return page("This family link is not switched on.", 404);
   const token = Array.isArray(params.token) ? params.token[0] : params.token;
   const raw = await kv.get("current", "text");
   if (!token || !raw) return page("This family link isn't available any more. Ask whoever sent it for a new one.", 404);
-  let current: { token: string; upload: string; count: number; size: number };
+  let current: { token: string; upload: string; count: number; size: number; kind?: string; updatedAt?: string };
   try {
     current = JSON.parse(raw);
   } catch {
@@ -38,6 +40,20 @@ export async function onRequestGet({ env, params, waitUntil }: Ctx): Promise<Res
   }
   if (current.token !== token) {
     return page("This family link isn't available any more. Ask whoever sent it for a new one.", 404);
+  }
+
+  if (current.kind === "zip") {
+    if (!env.ASSETS) return page("The app files could not be found.", 500);
+    const appResponse = await env.ASSETS.fetch(new URL("/", request.url).toString());
+    const html = await appResponse.text();
+    const info = JSON.stringify({
+      updatedAt: current.updatedAt ?? "",
+      size: current.size,
+      data: `/s/${token}/data`,
+    }).replace(/</g, "\\u003c");
+    const tag = `<script>window.__ROOTWORK_SHARE=${info}</script>`;
+    const out = html.includes("</head>") ? html.replace("</head>", () => `${tag}</head>`) : tag + html;
+    return new Response(out, { headers: { ...BASE_HEADERS, "content-type": "text/html; charset=utf-8" } });
   }
 
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();

@@ -30,7 +30,7 @@ export function shareStatus(): Promise<ShareStatus> {
   return call<ShareStatus>("action=status");
 }
 
-/** Uploads the view-only page in pieces, then switches the link over to it. */
+/** Uploads the family backup in pieces, then switches the link over to it. */
 export async function publishShare(
   page: Blob,
   rotate: boolean,
@@ -44,7 +44,7 @@ export async function publishShare(
   }
   onProgress(total, total);
   return call<ShareStatus>(
-    `action=finish&upload=${encodeURIComponent(upload)}&count=${total}&size=${page.size}${rotate ? "&rotate=1" : ""}`,
+    `action=finish&upload=${encodeURIComponent(upload)}&count=${total}&size=${page.size}&kind=zip${rotate ? "&rotate=1" : ""}`,
   );
 }
 

@@ -1,11 +1,11 @@
 // Cloudflare Pages Function: POST /api/share
-// Publishes the view-only family page so it can be opened from one link (/s/<token>).
+// Publishes the family backup (zip) so the full app can be opened from one link (/s/<token>).
 // Needs a KV namespace bound as SHARE (see wrangler.toml) and the same FAMILY_PASSWORD secret.
 //
 //   ?action=status                          who is sharing, and when it was last updated
 //   ?action=start                           begin an upload, returns an upload id
 //   ?action=chunk&upload=ID&i=N   (body)    store piece N of the page
-//   ?action=finish&upload=ID&count=N&size=S[&rotate=1]   switch the link over to the new upload
+//   ?action=finish&upload=ID&count=N&size=S&kind=zip[&rotate=1]   switch the link over to the new upload
 //   ?action=stop                            stop sharing (the link stops working)
 
 type KV = {
@@ -17,7 +17,7 @@ type KV = {
 };
 type Env = { FAMILY_PASSWORD?: string; SHARE?: KV };
 type Ctx = { request: Request; env: Env };
-type Current = { token: string; upload: string; count: number; size: number; updatedAt: string };
+type Current = { token: string; upload: string; count: number; size: number; updatedAt: string; kind?: "zip" };
 
 const JSON_HEADERS = { "content-type": "application/json", "cache-control": "no-store" };
 const MAX_CHUNK = 8 * 1024 * 1024;
@@ -118,6 +118,7 @@ export async function onRequestPost({ request, env }: Ctx): Promise<Response> {
       upload,
       count,
       size: Number.isFinite(size) ? size : 0,
+      kind: url.searchParams.get("kind") === "zip" ? "zip" : undefined,
       updatedAt: new Date().toISOString(),
     };
     await kv.put("current", JSON.stringify(next));
