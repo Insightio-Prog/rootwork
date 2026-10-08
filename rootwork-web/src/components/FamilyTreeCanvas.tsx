@@ -538,6 +538,7 @@ export function FamilyTreeCanvas({
             people={chartPeople}
             homeId={homePersonId}
             onMakeHome={readOnly ? undefined : onMakeHome}
+            readOnly={readOnly}
             selectedId={selectedId}
             panelOpen={panelOpen && Boolean(selected)}
             maxGenerations={fanGenerations}

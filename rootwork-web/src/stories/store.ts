@@ -90,6 +90,8 @@ export async function initStories() {
     try {
       await ensureWorkspaces();
       const loaded = await loadStored();
+      // A shared page may have loaded its own stories while we were waiting; never wipe them.
+      if (exportMode) return;
       setStories(loaded ?? {});
     } catch (error) {
       initPromise = null;

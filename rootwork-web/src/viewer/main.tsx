@@ -2,11 +2,18 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { readHtmlExportPayload } from "../export/htmlExport";
 import { setExportFlags } from "../data/countries";
+import { setExportMedia } from "../media/store";
+import { hydrateStories } from "../stories";
 import { ViewerApp } from "./ViewerApp";
 import "../styles/organic.css";
 import "../styles/app.css";
 
 const payload = readHtmlExportPayload();
+// Load the first tree's stories and photos before anything draws, so no screen can start empty.
+if (payload?.trees[0]) {
+  setExportMedia(payload.trees[0].media ?? {});
+  hydrateStories(payload.trees[0].stories ?? {});
+}
 if (payload?.flags) setExportFlags(payload.flags);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

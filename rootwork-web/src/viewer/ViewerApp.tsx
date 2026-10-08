@@ -8,10 +8,14 @@ import { parseTree } from "../state/useTreeStore";
 import { usePhone } from "../state/usePhone";
 import { PhoneTree } from "../components/PhoneTree";
 import { PhoneFan } from "../components/PhoneFan";
-import { BrandMark, IconFan, IconHome, IconStory, IconTree } from "../icons";
+import { ChartTabs } from "../components/ChartTabs";
+import { MediaPage } from "../components/MediaPage";
+import { TimelinePage } from "../components/TimelinePage";
+import type { ChartTabId } from "../state/useTreeUi";
+import { BrandMark, IconFan, IconHome, IconMedia, IconStory, IconTree } from "../icons";
 import type { HtmlExportPayload, HtmlExportTree } from "../export/htmlExport";
 
-type ViewerNav = "home" | "tree" | "fan" | "story";
+type ViewerNav = "home" | "tree" | "fan" | "story" | "media";
 
 const ignored = () => {};
 
@@ -28,6 +32,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [storyPersonId, setStoryPersonId] = useState<string | null>(null);
   const phone = usePhone();
+  const [tab, setTab] = useState<ChartTabId>("ancestor");
   const [homeOverride, setHomeOverride] = useState<Record<string, string>>(() => {
     try {
       return JSON.parse(localStorage.getItem("rootwork.viewer.home") ?? "{}") as Record<string, string>;
@@ -144,11 +149,19 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             <IconStory />
             <span className="nav-label">{phone ? "Stories" : "Life Story"}</span>
           </button>
+          <button
+            type="button"
+            className={`nav-item${nav === "media" ? " is-active" : ""}`}
+            onClick={() => setNav("media")}
+          >
+            <IconMedia />
+            <span className="nav-label">Media</span>
+          </button>
         </nav>
       </aside>
       <main className="app-main">
         <header className="app-header">
-          <h4>{nav === "tree" || nav === "fan" ? treeTitle : nav === "story" ? "Life Story" : "Your trees"}</h4>
+          <h4>{nav === "tree" || nav === "fan" ? treeTitle : nav === "story" ? "Life Story" : nav === "media" ? "Media" : "Your trees"}</h4>
           {nav === "tree" || nav === "fan" ? <span className="tag tag-outline people-count">{peopleCountLabel(personCount)}</span> : null}
         </header>
         {nav === "home" ? (
@@ -178,6 +191,8 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             onPick={setStoryPersonId}
             onChangePerson={() => setStoryPersonId(null)}
           />
+        ) : nav === "media" ? (
+          <MediaPage people={people} onAddMedia={ignored} onRemoveMedia={ignored} readOnly />
         ) : nav === "fan" ? (
           <PhoneFan
             key={entry.id}
@@ -203,9 +218,17 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             }}
             onGoToBackup={() => setNav("home")}
           />
+        ) : tab === "timeline" ? (
+          <>
+            <ChartTabs tab={tab} onTab={setTab} />
+            <TimelinePage key={entry.id} treeId={entry.id} people={people} homePersonId={homePersonId} />
+          </>
         ) : (
+          <>
+          <ChartTabs tab={tab} onTab={setTab} />
           <FamilyTreeCanvas
             key={entry.id}
+            chartKind={tab === "fan" ? "fan" : tab === "focus" ? "focus" : "ancestor"}
             treeId={entry.id}
             people={people}
             homePersonId={homePersonId}
@@ -253,6 +276,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
               setNav("story");
             }}
           />
+          </>
         )}
       </main>
     </div>
