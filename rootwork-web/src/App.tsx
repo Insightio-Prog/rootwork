@@ -333,6 +333,10 @@ export default function App() {
             onImported={async () => {
               await store.reloadFromDisk();
               await reloadStories();
+              ui.setSelectedId(null);
+              ui.setStoryPersonId(null);
+              // Take the person straight to the tree they just loaded.
+              ui.setNav("tree");
             }}
             onImportGedcom={(text) => store.mergeGedcomTree(text)}
             onCollapseDuplicates={() => store.collapseDuplicates()}
