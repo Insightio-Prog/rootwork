@@ -101,12 +101,29 @@ export function peopleForFamilyLine(
   if (keys.size === 0) return people;
   const ids = new Set<string>();
   if (homeId && people[homeId]) ids.add(homeId);
-  for (const person of Object.values(people)) {
-    if (!keys.has(normalizeFamilyName(person.familyName))) continue;
+  const addWithSpouses = (person: Person) => {
     ids.add(person.id);
     for (const spouseId of person.spouseIds) {
       if (people[spouseId]) ids.add(spouseId);
     }
+  };
+  const onLine = new Set<string>();
+  for (const person of Object.values(people)) {
+    if (!keys.has(normalizeFamilyName(person.familyName))) continue;
+    onLine.add(person.id);
+    addWithSpouses(person);
+  }
+  // A surname follows the father, so keep climbing the paternal line even where the spelling changes
+  // (McGuinness back to McGinnis) - otherwise the line stops one generation short.
+  const queue = [...onLine];
+  while (queue.length > 0) {
+    const person = people[queue.pop() as string];
+    if (!person || person.gender !== "male") continue;
+    const father = person.parentIds.map((id) => people[id]).find((parent) => parent?.gender === "male");
+    if (!father || onLine.has(father.id)) continue;
+    onLine.add(father.id);
+    addWithSpouses(father);
+    queue.push(father.id);
   }
   const next: Record<string, Person> = {};
   for (const id of ids) {
