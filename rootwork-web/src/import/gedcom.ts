@@ -4,6 +4,7 @@ import {
   createNotableEvent,
   createPerson,
   createResidence,
+  parseYear,
   uniqueIds,
   type Gender,
   type Person,
@@ -22,6 +23,7 @@ const EVENT_TITLES: Record<string, string> = {
   EMIG: "Emigration",
   PROB: "Probate",
   EVEN: "Event",
+  MARB: "Marriage banns",
 };
 
 export function parseGedcom(text: string): GedNode[] {
@@ -60,11 +62,12 @@ export function mapGedcomPeople(text: string): Record<string, Person> {
     throw new Error("no people in this GEDCOM");
   }
   const families = indexByTag(roots, "FAM");
+  const sources = indexByTag(roots, "SOUR");
   const people: Record<string, Person> = {};
   for (const [xref, node] of individuals) {
-    people[xref] = mapIndividual(xref, node);
+    people[xref] = mapIndividual(xref, node, sources);
   }
-  applyFamilies(people, families);
+  applyFamilies(people, families, sources, individuals);
   return people;
 }
 
@@ -77,13 +80,17 @@ function indexByTag(roots: GedNode[], tag: string): Map<string, GedNode> {
   return map;
 }
 
-function mapIndividual(xref: string, node: GedNode): Person {
-  const name = readName(node);
+function mapIndividual(xref: string, node: GedNode, sources: Map<string, GedNode>): Person {
+  const names = children(node, "NAME");
+  const primary = names.find((item) => child(item, "_PRIM")?.value.trim().toUpperCase() === "Y") ?? names[0];
+  const name = readName(primary);
   const sex = child(node, "SEX");
-  const gender: Gender = concatText(sex).trim().toUpperCase().startsWith("M") ? "male" : "female";
+  const sexText = concatText(sex).trim().toUpperCase();
+  const gender: Gender = sexText.startsWith("M") ? "male" : "female";
   const birth = child(node, "BIRT");
   const death = child(node, "DEAT");
-  const living = !death;
+  const deceasedFacts = ["BURI", "PROB"].some((tag) => child(node, tag));
+  const living = isLiving(node, factDate(birth), Boolean(death) || deceasedFacts);
   const person = createPerson({
     givenName: name.given,
     familyName: name.family,
@@ -104,11 +111,74 @@ function mapIndividual(xref: string, node: GedNode): Person {
     ...children(node, "BAPM"),
     ...children(node, "EMIG"),
     ...children(node, "PROB"),
-  ].flatMap(mapEvent);
+    ...children(node, "MARB"),
+  ].flatMap((item) => mapEvent(item, sources));
+
+  // Things the tree has no dedicated field for are kept as notable events so nothing is lost.
+  const extras: Person["notableEvents"] = [];
+  for (const other of names) {
+    if (other === primary) continue;
+    const text = displayGedName(other);
+    if (text && text.toLowerCase() !== displayGedName(primary).toLowerCase()) {
+      extras.push(createNotableEvent("Also known as", "", text));
+    }
+  }
+  const suffix = concatText(child(primary, "NSFX")).trim();
+  if (suffix) extras.push(createNotableEvent("Name suffix", "", suffix));
+  const cause = concatText(child(death, "CAUS")).trim();
+  if (cause) extras.push(createNotableEvent("Cause of death", factDate(death), cause));
+  for (const note of children(node, "NOTE")) {
+    const text = concatText(note).trim();
+    if (text && !pointer(text)) extras.push(createNotableEvent("Note", "", text));
+  }
+  const lines = new Set<string>();
+  const collect = (label: string, owner: GedNode | undefined) => {
+    if (!owner) return;
+    for (const cite of children(owner, "SOUR")) {
+      const line = citationLine(cite, sources);
+      if (line) lines.add(label ? `${label}: ${line}` : line);
+    }
+  };
+  collect("Record", node);
+  collect("Name", primary);
+  collect("Birth", birth);
+  collect("Death", death);
+  if (lines.size) extras.push(createNotableEvent("Sources", "", [...lines].slice(0, 14).join("\n")));
+  person.notableEvents.push(...extras);
   return person;
 }
 
-function applyFamilies(people: Record<string, Person>, families: Map<string, GedNode>) {
+function displayGedName(node: GedNode | undefined): string {
+  if (!node) return "";
+  const { given, family } = readName(node);
+  return [given, family].filter(Boolean).join(" ").trim();
+}
+
+/** Findmypast marks people it knows to be dead with _NLIV (and the living with _LIV) but gives no death date. */
+function isLiving(node: GedNode, birth: string, hasDeathFact: boolean): boolean {
+  if (hasDeathFact) return false;
+  if (child(node, "_NLIV")) return false;
+  if (child(node, "_LIV")) return true;
+  const year = parseYear(birth);
+  if (year !== null && new Date().getFullYear() - year > 100) return false;
+  return true;
+}
+
+function citationLine(cite: GedNode, sources: Map<string, GedNode>): string {
+  const source = sources.get(pointer(cite.value) ?? "");
+  const title = (concatText(child(source, "TITL")) || concatText(child(source, "ABBR"))).trim();
+  const page = concatText(child(cite, "PAGE")).trim();
+  const ref = concatText(child(cite, "REF")).trim();
+  const detail = page && !title.toLowerCase().includes(page.toLowerCase()) ? page.slice(0, 160) : "";
+  return [title, detail, ref].filter(Boolean).join(" - ");
+}
+
+function applyFamilies(
+  people: Record<string, Person>,
+  families: Map<string, GedNode>,
+  sources: Map<string, GedNode>,
+  individuals: Map<string, GedNode>,
+) {
   for (const node of families.values()) {
     const husb = pointer(child(node, "HUSB")?.value ?? "");
     const wife = pointer(child(node, "WIFE")?.value ?? "");
@@ -120,6 +190,10 @@ function applyFamilies(people: Record<string, Person>, families: Map<string, Ged
     const date = factDate(marr);
     const place = factPlace(marr);
 
+    // Sex is sometimes missing; a person's role in a family says which it must be.
+    if (husb && people[husb] && !child(individuals.get(husb), "SEX")) people[husb].gender = "male";
+    if (wife && people[wife] && !child(individuals.get(wife), "SEX")) people[wife].gender = "female";
+
     if (husb && wife && people[husb] && people[wife]) {
       people[husb].spouseIds = uniqueIds([...people[husb].spouseIds, wife]);
       people[wife].spouseIds = uniqueIds([...people[wife].spouseIds, husb]);
@@ -127,15 +201,38 @@ function applyFamilies(people: Record<string, Person>, families: Map<string, Ged
       people[wife].marriages[husb] = { date, place };
     }
 
+    const marriageLines = marr
+      ? children(marr, "SOUR")
+          .map((cite) => citationLine(cite, sources))
+          .filter(Boolean)
+      : [];
+    const banns = children(node, "MARB").flatMap((item) => mapEvent(item, sources));
+    for (const spouseId of parents) {
+      const spouse = people[spouseId];
+      const otherId = parents.find((id) => id !== spouseId);
+      const other = otherId ? people[otherId] : undefined;
+      const withName = (title: string) => (other ? `${title} (to ${[other.givenName, other.familyName].join(" ").trim()})` : title);
+      for (const event of banns) spouse.notableEvents.push({ ...event, id: crypto.randomUUID(), title: withName(event.title) });
+      if (marriageLines.length) {
+        spouse.notableEvents.push(createNotableEvent(withName("Marriage sources"), date, marriageLines.join("\n")));
+      }
+    }
+
     for (const childId of kids) {
       const person = people[childId];
+      if (person.parentIds.length && parents.length && !parents.every((id) => person.parentIds.includes(id))) {
+        const names = parents
+          .map((id) => [people[id].givenName, people[id].familyName].join(" ").trim())
+          .join(" and ");
+        person.notableEvents.push(createNotableEvent("Other recorded parents", "", names));
+        continue;
+      }
       person.parentIds = uniqueIds([...person.parentIds, ...parents]).slice(0, 2);
     }
   }
 }
 
-function readName(node: GedNode): { given: string; family: string } {
-  const nameNode = child(node, "NAME");
+function readName(nameNode: GedNode | undefined): { given: string; family: string } {
   const parsed = parseSlashName(concatText(nameNode));
   const given = concatText(child(nameNode, "GIVN")) || parsed.given;
   const family = concatText(child(nameNode, "SURN")) || parsed.family;
@@ -156,9 +253,11 @@ function parseSlashName(value: string): { given: string; family: string } {
 
 function mapResidence(node: GedNode): Person["residences"] {
   const place = factPlace(node);
-  if (!place) return [];
+  const address = concatText(child(node, "ADDR")).trim().replace(/\s*\n\s*/g, ", ");
+  const full = [address, place].filter(Boolean).join(", ");
+  if (!full) return [];
   const { from, to } = parseResidenceDates(factDate(node));
-  return [createResidence(place, from, to)];
+  return [createResidence(full, from, to)];
 }
 
 function parseResidenceDates(value: string): { from: string; to: string } {
@@ -191,7 +290,7 @@ function warFromNote(note: string): string {
   return note.split(/[.!]/)[0]?.trim().slice(0, 80) ?? note.slice(0, 80);
 }
 
-function mapEvent(node: GedNode): Person["notableEvents"] {
+function mapEvent(node: GedNode, sources: Map<string, GedNode>): Person["notableEvents"] {
   const type = concatText(child(node, "TYPE")).trim();
   const page = concatText(child(children(node, "SOUR")[0], "PAGE")).trim();
   const title =
@@ -201,7 +300,10 @@ function mapEvent(node: GedNode): Person["notableEvents"] {
   const date = factDate(node);
   const place = factPlace(node);
   const note = children(node, "NOTE").map(concatText).join("\n").trim();
-  const detail = [place, note].filter(Boolean).join("\n");
+  const cites = children(node, "SOUR")
+    .map((cite) => citationLine(cite, sources))
+    .filter(Boolean);
+  const detail = [place, note, ...new Set(cites)].filter(Boolean).join("\n");
   return [createNotableEvent(title, date, detail)];
 }
 
