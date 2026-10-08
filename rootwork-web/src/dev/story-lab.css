@@ -1,0 +1,209 @@
+.story-lab {
+  position: fixed;
+  inset: 16px;
+  z-index: 10000;
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+.story-lab-editor,
+.story-lab-preview {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.story-lab-editor {
+  padding: 14px 14px 12px;
+  border-right: 1px solid var(--color-divider);
+  overflow: hidden;
+}
+
+.story-lab-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  margin-bottom: 4px;
+}
+
+.story-lab-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.story-lab-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: var(--font-heading-weight);
+}
+
+.story-lab-title-row .btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.story-lab-editor label {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-neutral-700);
+}
+
+.story-lab-editor select,
+.story-lab-editor textarea,
+.story-lab-editor .input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.story-lab-editor textarea {
+  min-height: 88px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+}
+
+.story-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.story-lab-actions .btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.story-lab-blocks {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.story-lab-insert {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0;
+}
+
+.story-lab-insert button {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-700);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.story-lab-block {
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.story-lab-block.is-photo {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+}
+
+.story-lab-block.is-hover {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.story-lab-block-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
+}
+
+.story-lab-block-head button {
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-800);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.story-lab-block-prose {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.story-lab-block-prose p,
+.story-lab-block-prose ul,
+.story-lab-block-prose ol,
+.story-lab-block-prose h2,
+.story-lab-block-prose h3,
+.story-lab-block-prose h4 {
+  margin: 0 0 8px;
+}
+
+.story-lab-photo-fields {
+  display: grid;
+  gap: 6px;
+}
+
+.story-lab-preview {
+  background: var(--color-bg);
+  padding: 0;
+}
+
+.story-lab-preview-bar {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 22px 0;
+}
+
+.story-lab-preview-bar span {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+
+.story-lab-preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 28px 48px;
+}
+
+.story-lab-error {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--color-accent-800);
+}
+
+.story-lab-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-neutral-700);
+}

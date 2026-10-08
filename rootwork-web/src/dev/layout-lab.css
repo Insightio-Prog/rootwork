@@ -1,0 +1,99 @@
+html.is-layout-lab [data-layout] {
+  cursor: grab;
+  outline: 1.5px dashed var(--color-accent);
+  outline-offset: 2px;
+}
+
+html.is-layout-lab .person-card [data-layout] {
+  z-index: 8;
+}
+
+html.is-layout-lab.is-layout-dragging,
+html.is-layout-lab.is-layout-dragging [data-layout] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.layout-lab {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  width: 240px;
+  padding: 14px 14px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.layout-lab-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+  margin-bottom: 4px;
+}
+
+.layout-lab-title {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: var(--font-heading-weight);
+}
+
+.layout-lab-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0;
+}
+
+.layout-lab-row span:last-child {
+  color: var(--color-neutral-700);
+}
+
+.layout-lab-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+  font-size: 12px;
+}
+
+.layout-lab-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.layout-lab-actions .btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.layout-lab-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-neutral-700);
+}
+
+.layout-lab-mismatches {
+  margin-top: 8px;
+}
+
+.layout-lab-mismatch-list {
+  max-height: 140px;
+  overflow: auto;
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-neutral-700);
+}
