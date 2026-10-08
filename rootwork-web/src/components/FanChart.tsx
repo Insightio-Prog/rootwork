@@ -15,6 +15,7 @@ import { countryNameFor, flagCodeFor, flagCodeFromPlace, flagUrl } from "../data
 import { BRANCH_SWATCHES, ERAS, LIFESPANS, swatchFor, type FanColourMode, type Swatch } from "../tree/fanColours";
 import { nationOf } from "../tree/heritage";
 import { segmentLabel } from "../tree/fanLabel";
+import { longPressJustFired, startLongPress } from "../state/longPress";
 import { PersonContextMenu, type RelativeKind } from "./PersonContextMenu";
 
 const MIN_ZOOM = 0.25;
@@ -354,7 +355,15 @@ export function FanChart({
               <g
                 key={`${slot.generation}-${slot.index}`}
                 className={className}
-                onPointerDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  const person = slot.person;
+                  if (person)
+                    startLongPress(event, (x, y) => {
+                      onSelect(person.id);
+                      setMenu({ personId: person.id, x, y });
+                    });
+                }}
                 onPointerMove={(event) => {
                   const host = canvasRef.current;
                   if (slot.person && host) setHover({ person: slot.person, ...canvasPoint(host, event) });
@@ -364,6 +373,7 @@ export function FanChart({
                   if (slot.person) setRootOverride(slot.person.id === homeId ? null : slot.person.id);
                 }}
                 onClick={() => {
+                  if (longPressJustFired()) return;
                   if (slot.person) onSelect(slot.person.id);
                   else if (slot.childId) onAddParent(slot.childId, slot.role === "father" ? "male" : "female");
                 }}

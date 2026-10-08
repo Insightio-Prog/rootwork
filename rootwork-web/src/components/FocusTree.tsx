@@ -315,11 +315,12 @@ export function FocusTree({
                 style={{ left: card.x, top: card.y, width: card.w, height: card.h }}
               >
                 <PersonCard
+                  touchMenu
                   person={person}
                   selected={selectedId === person.id}
                   onSelect={(id) => expandPerson(id)}
                   onContextMenu={(event, id) => {
-                    if (panRef.current) return;
+                    if (panRef.current && event.type !== "longpress") return;
                     setMenu({ personId: id, x: event.clientX, y: event.clientY });
                   }}
                 />

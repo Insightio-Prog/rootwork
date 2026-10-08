@@ -3381,3 +3381,4 @@ body {
 .is-phone .dialog-backdrop { padding: 0; }
 .is-phone .dialog-backdrop { position: fixed; inset: 0; z-index: 70; }
 .is-phone .ask-claude-head { flex-wrap: wrap; } .is-phone .ask-claude-head > div:first-child { flex: 1 1 100%; }
+.person-card, .fan-seg { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
