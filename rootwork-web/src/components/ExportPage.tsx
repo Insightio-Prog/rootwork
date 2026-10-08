@@ -177,7 +177,7 @@ export function ExportPage({
                 setConfirmImport(true);
               }}
             >
-              Import backup
+              {busy === "import" ? "Importing, this can take a minute…" : "Import backup"}
             </button>
           </div>
         </div>
