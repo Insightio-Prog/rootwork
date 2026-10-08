@@ -14,7 +14,7 @@ const LABELS: Record<string, string> = {
 
 export const UNKNOWN_KEY = "unknown";
 
-function nationOf(person: Person): string | null {
+export function nationOf(person: Person): string | null {
   return flagCodeFor(person.nationality) ?? flagCodeFromPlace(person.birthPlace);
 }
 

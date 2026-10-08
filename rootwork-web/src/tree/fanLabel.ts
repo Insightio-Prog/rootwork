@@ -30,6 +30,13 @@ function compactYears(person: Person): string | null {
   return label.replace(/ – /g, "–");
 }
 
+/** Shrinks the type, never below the minimum, so the longest single word of the name fits the width. */
+function fitFont(fontSize: number, width: number, person: Person | null): number {
+  if (!person) return fontSize;
+  const longest = Math.max(1, ...displayName(person).split(/\s+/).map((word) => word.length));
+  return Math.max(MIN_FONT, Math.min(fontSize, (width - 6) / (longest * CHAR_RATIO)));
+}
+
 function maxCharsFor(width: number, fontSize: number): number {
   return Math.max(1, Math.floor((width - 6) / (fontSize * CHAR_RATIO)));
 }
@@ -59,12 +66,8 @@ function wrapToWidth(text: string, maxChars: number, maxLines: number): string[]
       current = word;
       continue;
     }
-    let rest = word;
-    while (rest.length > maxChars && lines.length < maxLines) {
-      lines.push(rest.slice(0, maxChars));
-      rest = rest.slice(maxChars);
-    }
-    if (lines.length < maxLines) current = rest;
+    // Never break a name in the middle of a word: shorten it with an ellipsis instead.
+    current = `${word.slice(0, Math.max(1, maxChars - 1))}\u2026`;
   }
   if (current && lines.length < maxLines) lines.push(current);
   return lines;
@@ -131,8 +134,10 @@ export function segmentLabel(options: {
   a0: number;
   a1: number;
   mid: number;
+  /** Leave room at the outer edge for a flag. */
+  flagRoom?: boolean;
 }): FanSegmentLabel | null {
-  const { person, role, canAdd, generation, index, cx, cy, inner, outer, a0, a1, mid } = options;
+  const { person, role, canAdd, generation, index, cx, cy, inner, outer, a0, a1, mid, flagRoom = false } = options;
   const ringW = outer - inner;
   const midR = (inner + outer) / 2;
   const arcLen = midR * Math.abs(a0 - a1);
@@ -142,9 +147,9 @@ export function segmentLabel(options: {
   const reverse = Math.sin(mid) < 0;
 
   if (useArc) {
-    const maxLines = Math.max(1, Math.min(4, Math.floor((ringW - 10) / 12)));
+    const maxLines = Math.max(1, Math.min(4, Math.floor((ringW - 10 - (flagRoom ? 12 : 0)) / 12)));
     let fontSize = Math.min(generation <= 1 ? 13 : generation === 2 ? 12 : 11, ringW / (maxLines + 1.1));
-    fontSize = Math.max(MIN_FONT, fontSize);
+    fontSize = fitFont(Math.max(MIN_FONT, fontSize), arcLen, person);
     let chars = maxCharsFor(arcLen, fontSize);
     if (chars < 4) {
       fontSize = Math.max(MIN_FONT, fontSize * 0.86);
@@ -154,7 +159,7 @@ export function segmentLabel(options: {
     if (lines.length === 0) return null;
     const lineHeight = fontSize * 1.22;
     const block = (lines.length - 1) * lineHeight;
-    const startR = midR - block / 2;
+    const startR = midR - block / 2 - (flagRoom ? 6 : 0);
     return {
       mode: "arc",
       fontSize,
@@ -166,9 +171,10 @@ export function segmentLabel(options: {
     };
   }
 
-  const fontSize = Math.max(
-    MIN_FONT,
-    Math.min(generation <= 2 ? 11 : 9.5, ringW / 4.6, arcLen / 1.35),
+  const fontSize = fitFont(
+    Math.max(MIN_FONT, Math.min(generation <= 2 ? 11 : 9.5, ringW / 4.6, arcLen / 1.35)),
+    ringW,
+    person,
   );
   const chars = maxCharsFor(ringW, fontSize);
   const maxLines = Math.max(1, Math.min(4, Math.floor((arcLen - 4) / (fontSize * 1.18))));

@@ -3275,3 +3275,17 @@ body {
 /* Stop the browser starting a text/SVG drag (red "not allowed" cursor) while panning the timeline */
 .timeline-canvas, .timeline-canvas * { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
 .timeline-canvas { touch-action: none; }
+
+/* Fan chart: colour modes, hover card, flags */
+.fan-modes { position: absolute; top: 20px; right: 24px; z-index: 3; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--color-surface); border: 1px solid var(--color-divider); box-shadow: var(--shadow-md); }
+.fan-modes.is-panel-open { right: 454px; }
+.fan-modes button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font: inherit; font-size: 12.5px; cursor: pointer; color: var(--color-neutral-700); }
+.fan-modes button:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.fan-modes button.is-active { background: color-mix(in srgb, var(--color-accent) 15%, transparent); color: var(--color-accent-800); }
+.fan-modes .fan-back { color: var(--color-accent-800); font-weight: 600; margin-right: 4px; }
+.fan-hover { position: absolute; z-index: 4; pointer-events: none; display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; max-width: 260px; border-radius: 12px; background: var(--color-surface); border: 1px solid var(--color-divider); box-shadow: var(--shadow-md); font-size: 12.5px; color: var(--color-neutral-700); }
+.fan-hover strong { color: var(--color-text); font-size: 13.5px; }
+.fan-hover em { margin-top: 4px; font-size: 11.5px; opacity: .75; }
+.fan-hover-nation img { width: 16px; height: 11px; object-fit: cover; border-radius: 2px; vertical-align: -1px; }
+.fan-flag { pointer-events: none; }
+.fan-seg--empty path { stroke-dasharray: 3 4; }

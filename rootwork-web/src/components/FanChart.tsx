@@ -9,10 +9,13 @@ import {
   FAN_START,
   FAN_MAX_GENERATIONS,
   fanMetrics,
+  fanRingsNeeded,
   polar,
   ringRadii,
-  slotAngles,
 } from "../tree/fan";
+import { countryNameFor, flagCodeFor, flagCodeFromPlace, flagUrl } from "../data/countries";
+import { nationOf, UNKNOWN_KEY } from "../tree/heritage";
+import { HERITAGE_COLOURS, otherColour } from "../tree/heritageColours";
 import { segmentLabel } from "../tree/fanLabel";
 import { PersonContextMenu, type RelativeKind } from "./PersonContextMenu";
 
@@ -20,6 +23,28 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 1.75;
 const ZOOM_STEP = 0.15;
 const PANEL_WIDTH = 430;
+
+type ColourMode = "branch" | "heritage" | "generation";
+const MODE_KEY = "rootwork.fan.colour";
+const MODES: { id: ColourMode; label: string }[] = [
+  { id: "branch", label: "Branches" },
+  { id: "heritage", label: "Heritage" },
+  { id: "generation", label: "Generations" },
+];
+
+function loadMode(): ColourMode {
+  try {
+    const value = localStorage.getItem(MODE_KEY);
+    return value === "heritage" || value === "generation" ? value : "branch";
+  } catch {
+    return "branch";
+  }
+}
+
+function heritageColour(person: Person) {
+  const key = nationOf(person) ?? UNKNOWN_KEY;
+  return HERITAGE_COLOURS[key] ?? { bg: otherColour(key), fg: "#ffffff" };
+}
 
 type View = { zoom: number; x: number; y: number };
 
@@ -91,13 +116,31 @@ export function FanChart({
   const [menu, setMenu] = useState<{ personId: string; x: number; y: number } | null>(null);
   const viewRef = useRef(view);
   viewRef.current = view;
+  const [mode, setMode] = useState<ColourMode>(loadMode);
+  const [rootOverride, setRootOverride] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ person: Person; x: number; y: number } | null>(null);
 
-  const home = people[homeId];
+  useEffect(() => setRootOverride(null), [homeId]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODE_KEY, mode);
+    } catch {
+      /* private window: fine */
+    }
+  }, [mode]);
+
+  // Double-clicking a wedge centres the fan on that ancestor; the chart then shows their ancestors instead.
+  const centreId = rootOverride && people[rootOverride] ? rootOverride : homeId;
+  const home = people[centreId];
   const generations = Math.min(FAN_MAX_GENERATIONS, Math.max(2, maxGenerations));
-  const metrics = useMemo(() => fanMetrics(generations), [generations]);
+  const rings = useMemo(
+    () => fanRingsNeeded(people, centreId, generations),
+    [people, centreId, generations],
+  );
+  const metrics = useMemo(() => fanMetrics(rings + 1), [rings]);
   const slots = useMemo(
-    () => buildFanSlots(people, homeId, generations),
-    [people, homeId, generations],
+    () => buildFanSlots(people, centreId, generations),
+    [people, centreId, generations],
   );
 
   function setViewNow(next: View) {
@@ -151,7 +194,7 @@ export function FanChart({
     observer.observe(canvas);
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeId, viewResetKey, generations]);
+  }, [homeId, centreId, viewResetKey, generations, rings]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -199,7 +242,7 @@ export function FanChart({
   function handleCanvasPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 && event.button !== 1) return;
     const target = event.target as HTMLElement;
-    if (target.closest(".tree-zoom, .card-menu, .fan-seg, .fan-hub, .fan-more")) return;
+    if (target.closest(".tree-zoom, .card-menu, .fan-seg, .fan-hub, .fan-more, .fan-modes")) return;
     panRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -235,7 +278,7 @@ export function FanChart({
           <path className="fan-plate" d={plate} />
           {slots.map((slot) => {
             const { inner, outer } = ringRadii(metrics, slot.generation);
-            const { a0, a1, mid } = slotAngles(slot.generation, slot.index);
+            const { a0, a1, mid } = slot;
             const path = donutPath(metrics.cx, metrics.cy, inner, outer, a0, a1);
             const filled = Boolean(slot.person);
             const selected = Boolean(slot.person && slot.person.id === selectedId);
@@ -248,6 +291,18 @@ export function FanChart({
             ]
               .filter(Boolean)
               .join(" ");
+            const nation = slot.person ? nationOf(slot.person) : null;
+            const flagRoom = Boolean(nation) && metrics.ringW >= 64 && Math.abs(a0 - a1) * ((inner + outer) / 2) >= 48;
+            const palette = slot.person && mode === "heritage" ? heritageColour(slot.person) : null;
+            const fillStyle =
+              !slot.person || mode === "branch"
+                ? undefined
+                : palette
+                  ? { fill: palette.bg }
+                  : {
+                      fill: `color-mix(in srgb, var(--color-accent) ${Math.max(14, 62 - slot.generation * 8)}%, var(--color-surface))`,
+                    };
+            const textStyle = palette ? { fill: palette.fg } : undefined;
             const label = segmentLabel({
               person: slot.person,
               role: slot.role,
@@ -261,10 +316,11 @@ export function FanChart({
               a0,
               a1,
               mid,
+              flagRoom,
             });
             const clipId = `fan-clip-${slot.generation}-${slot.index}`;
             const title = slot.person
-              ? `${displayName(slot.person)} · ${yearsLabel(slot.person)}`
+              ? undefined
               : canAdd
                 ? slot.role === "father"
                   ? "Add father"
@@ -276,6 +332,14 @@ export function FanChart({
                 key={`${slot.generation}-${slot.index}`}
                 className={className}
                 onPointerDown={(event) => event.stopPropagation()}
+                onPointerMove={(event) => {
+                  const host = canvasRef.current;
+                  if (slot.person && host) setHover({ person: slot.person, ...canvasPoint(host, event) });
+                }}
+                onPointerLeave={() => setHover(null)}
+                onDoubleClick={() => {
+                  if (slot.person) setRootOverride(slot.person.id === homeId ? null : slot.person.id);
+                }}
                 onClick={() => {
                   if (slot.person) onSelect(slot.person.id);
                   else if (slot.childId) onAddParent(slot.childId, slot.role === "father" ? "male" : "female");
@@ -295,7 +359,7 @@ export function FanChart({
                   {label?.mode === "arc" &&
                     label.lines.map((line) => <path key={line.id} id={line.id} d={line.d} />)}
                 </defs>
-                <path d={path} />
+                <path d={path} style={fillStyle} />
                 {label?.mode === "arc" && (
                   <g clipPath={`url(#${clipId})`}>
                     {label.lines.map((line) => (
@@ -309,6 +373,7 @@ export function FanChart({
                               : "fan-text fan-text--empty"
                         }
                         textAnchor="middle"
+                        style={textStyle}
                         fontSize={line.years ? label.fontSize * 0.92 : label.fontSize}
                       >
                         <textPath href={`#${line.id}`} startOffset="50%">
@@ -318,12 +383,28 @@ export function FanChart({
                     ))}
                   </g>
                 )}
+                {flagRoom && label?.mode === "arc" && nation && (() => {
+                  const at = polar(metrics.cx, metrics.cy, outer - 9, mid);
+                  return (
+                    <image
+                      href={flagUrl(nation)}
+                      x={at.x - 8}
+                      y={at.y - 5.5}
+                      width={16}
+                      height={11}
+                      preserveAspectRatio="xMidYMid slice"
+                      clipPath={`url(#${clipId})`}
+                      className="fan-flag"
+                    />
+                  );
+                })()}
                 {label?.mode === "radial" && (
                   <g clipPath={`url(#${clipId})`}>
                     <text
                       className={slot.person ? "fan-text" : "fan-text fan-text--empty"}
                       textAnchor="middle"
                       dominantBaseline="middle"
+                      style={textStyle}
                       fontSize={label.fontSize}
                       transform={`rotate(${label.rotation} ${label.x} ${label.y})`}
                     >
@@ -349,6 +430,7 @@ export function FanChart({
             className={`fan-hub${selectedId === home.id ? " is-selected" : ""}`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => onSelect(home.id)}
+            onDoubleClick={() => setRootOverride(null)}
             onContextMenu={(event) => {
               event.preventDefault();
               onSelect(home.id);
@@ -387,7 +469,7 @@ export function FanChart({
             .filter((slot) => slot.extraDepth > 0)
             .map((slot) => {
               const { outer } = ringRadii(metrics, slot.generation);
-              const { mid } = slotAngles(slot.generation, slot.index);
+              const { mid } = slot;
               const point = polar(metrics.cx, metrics.cy, outer + 16, mid);
               return (
                 <g
@@ -406,6 +488,39 @@ export function FanChart({
             })}
         </svg>
       </div>
+      <div className={`fan-modes${panelOpen ? " is-panel-open" : ""}`} role="group" aria-label="Fan colours">
+        {rootOverride && people[rootOverride] && (
+          <button type="button" className="fan-back" onClick={() => setRootOverride(null)}>
+            ← Back to {displayName(people[homeId])}
+          </button>
+        )}
+        {MODES.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={mode === item.id ? "is-active" : ""}
+            onClick={() => setMode(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {hover && (
+        <div className="fan-hover" style={{ left: hover.x + 16, top: hover.y + 16 }}>
+          <strong>{displayName(hover.person)}</strong>
+          <span>{yearsLabel(hover.person)}</span>
+          {hover.person.birthPlace && <span>Born {hover.person.birthPlace}</span>}
+          {(() => {
+            const code = flagCodeFor(hover.person.nationality) ?? flagCodeFromPlace(hover.person.birthPlace);
+            return code ? (
+              <span className="fan-hover-nation">
+                <img src={flagUrl(code)} alt="" /> {hover.person.nationality || countryNameFor(code)}
+              </span>
+            ) : null;
+          })()}
+          <em>Double-click to centre the fan here</em>
+        </div>
+      )}
       <div className="tree-zoom">
         <button
           type="button"

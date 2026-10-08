@@ -12,7 +12,11 @@ function fanRings(maxGenerations: number): number {
 
 export type FanSlot = {
   generation: number;
+  /** Binary path from the centre (unique per slot); `index >> (generation - 2)` is the grandparent branch. */
   index: number;
+  a0: number;
+  a1: number;
+  mid: number;
   person: Person | null;
   childId: string | null;
   role: "father" | "mother";
@@ -65,6 +69,36 @@ function extraAncestorDepth(people: Record<string, Person>, person: Person, limi
   return depth;
 }
 
+/** How wide a missing parent's stub is, compared with 1 for a known person at the edge of the chart. */
+const EMPTY_WEIGHT = 0.3;
+const KNOWN_FLOOR = 0.8;
+
+/** How many rings the chart really needs: as deep as the known ancestors go, plus one row of "add" stubs. */
+export function fanRingsNeeded(
+  people: Record<string, Person>,
+  homeId: string,
+  maxGenerations: number,
+): number {
+  const home = people[homeId];
+  if (!home) return 1;
+  const known = extraAncestorDepth(people, home, FAN_MAX_GENERATIONS);
+  return Math.max(1, Math.min(fanRings(maxGenerations), known + 1));
+}
+
+type FanNode = {
+  person: Person | null;
+  role: "father" | "mother";
+  childId: string | null;
+  generation: number;
+  index: number;
+  kids: FanNode[];
+  weight: number;
+};
+
+/**
+ * Lays the ancestors out so the room goes to the people we know: every known branch is shared out by how
+ * many ancestors it holds, and a missing parent is a narrow stub that does not grow any further out.
+ */
 export function buildFanSlots(
   people: Record<string, Person>,
   homeId: string,
@@ -72,39 +106,65 @@ export function buildFanSlots(
 ): FanSlot[] {
   const home = people[homeId];
   if (!home) return [];
-  const rings = fanRings(maxGenerations);
-  const slots: FanSlot[] = [];
-  let row: { person: Person | null }[] = [{ person: home }];
+  const rings = fanRingsNeeded(people, homeId, maxGenerations);
 
-  for (let generation = 1; generation <= rings; generation++) {
-    const next: { person: Person | null }[] = [];
-    for (let index = 0; index < row.length; index++) {
-      const node = row[index];
-      const parents = node.person
-        ? pedigreeParents(people, node.person)
-        : { father: null, mother: null };
-      const childId = node.person?.id ?? null;
-      const pair: { person: Person | null; role: "father" | "mother" }[] = [
-        { person: parents.father, role: "father" },
-        { person: parents.mother, role: "mother" },
+  function build(
+    person: Person | null,
+    role: "father" | "mother",
+    childId: string | null,
+    generation: number,
+    index: number,
+    path: Set<string>,
+  ): FanNode {
+    const node: FanNode = { person, role, childId, generation, index, kids: [], weight: person ? 1 : EMPTY_WEIGHT };
+    if (person && generation < rings && !path.has(person.id)) {
+      const parents = pedigreeParents(people, person);
+      const nextPath = new Set(path).add(person.id);
+      node.kids = [
+        build(parents.father, "father", person.id, generation + 1, index * 2, nextPath),
+        build(parents.mother, "mother", person.id, generation + 1, index * 2 + 1, nextPath),
       ];
-      for (let side = 0; side < 2; side++) {
-        const item = pair[side];
-        const extraDepth =
-          generation === rings && item.person ? extraAncestorDepth(people, item.person) : 0;
-        slots.push({
-          generation,
-          index: index * 2 + side,
-          person: item.person,
-          childId,
-          role: item.role,
-          extraDepth,
-        });
-        next.push({ person: item.person });
-      }
+      node.weight = Math.max(KNOWN_FLOOR, node.kids[0].weight + node.kids[1].weight);
     }
-    row = next;
+    return node;
   }
+
+  const roots = pedigreeParents(people, home);
+  const top = [
+    build(roots.father, "father", home.id, 1, 0, new Set([home.id])),
+    build(roots.mother, "mother", home.id, 1, 1, new Set([home.id])),
+  ];
+  const slots: FanSlot[] = [];
+
+  function place(node: FanNode, start: number, span: number) {
+    const gap = Math.min(0.014, span * 0.08);
+    const a0 = start - gap / 2;
+    const a1 = start - span + gap / 2;
+    const extraDepth =
+      node.generation === rings && node.person ? extraAncestorDepth(people, node.person) : 0;
+    slots.push({
+      generation: node.generation,
+      index: node.index,
+      a0,
+      a1,
+      mid: (a0 + a1) / 2,
+      person: node.person,
+      childId: node.childId,
+      role: node.role,
+      extraDepth,
+    });
+    const total = node.kids.reduce((sum, kid) => sum + kid.weight, 0);
+    let at = start;
+    for (const kid of node.kids) {
+      const kidSpan = (span * kid.weight) / total;
+      place(kid, at, kidSpan);
+      at -= kidSpan;
+    }
+  }
+
+  // Parents split the half-turn evenly so father and mother sides stay balanced.
+  place(top[0], FAN_START, FAN_SPAN / 2);
+  place(top[1], FAN_START - FAN_SPAN / 2, FAN_SPAN / 2);
   return slots;
 }
 
@@ -144,15 +204,6 @@ export function fanMetrics(maxGenerations: number): FanMetrics {
 export function ringRadii(metrics: FanMetrics, generation: number): { inner: number; outer: number } {
   const inner = metrics.hubR + (generation - 1) * (metrics.ringW + metrics.gap);
   return { inner, outer: inner + metrics.ringW };
-}
-
-export function slotAngles(generation: number, index: number): { a0: number; a1: number; mid: number } {
-  const count = 2 ** generation;
-  const slice = FAN_SPAN / count;
-  const gap = Math.min(0.014, slice * 0.08);
-  const a0 = FAN_START - index * slice - gap / 2;
-  const a1 = FAN_START - (index + 1) * slice + gap / 2;
-  return { a0, a1, mid: (a0 + a1) / 2 };
 }
 
 export function polar(cx: number, cy: number, r: number, angle: number): { x: number; y: number } {

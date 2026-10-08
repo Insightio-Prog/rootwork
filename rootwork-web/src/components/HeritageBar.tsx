@@ -1,16 +1,7 @@
 import { useMemo } from "react";
 import type { Person } from "../data/people";
-import { computeHeritage, UNKNOWN_KEY } from "../tree/heritage";
-
-// Soft, earthy versions of the national colours so the bar sits with the cream and terracotta of the app.
-const COLOURS: Record<string, { bg: string; fg: string }> = {
-  "gb-eng": { bg: "#f7efe0", fg: "#4a3a2a" },
-  ie: { bg: "#8aa987", fg: "#27381f" },
-  "gb-wls": { bg: "#c9776a", fg: "#ffffff" },
-  "gb-sct": { bg: "#7f9ebb", fg: "#17283a" },
-  [UNKNOWN_KEY]: { bg: "#a98467", fg: "#ffffff" },
-};
-const OTHER = ["#a395bd", "#d2b072", "#7fb0b0", "#bf8aa3", "#a2ad7a", "#93a0b5"];
+import { computeHeritage } from "../tree/heritage";
+import { HERITAGE_COLOURS as COLOURS, OTHER_HERITAGE as OTHER } from "../tree/heritageColours";
 
 type HeritageBarProps = {
   people: Record<string, Person>;
