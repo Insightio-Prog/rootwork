@@ -50,7 +50,19 @@ export function uniqueFamilyLineNames(names: Iterable<string>, max = MAX_FAMILY_
   return out;
 }
 
-export function familyLineSurnames(people: Record<string, Person>): { name: string; count: number }[] {
+export type FamilyLineSurname = { name: string; count: number; variants: string[]; similar: string[] };
+
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i += 1;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  return short.slice(i) === long.slice(i + 1);
+}
+
+export function familyLineSurnames(people: Record<string, Person>): FamilyLineSurname[] {
   const counts = new Map<string, { name: string; count: number; spellings: Map<string, number> }>();
   for (const person of Object.values(people)) {
     const name = person.familyName.trim();
@@ -63,10 +75,19 @@ export function familyLineSurnames(people: Record<string, Person>): { name: stri
     counts.set(key, existing);
   }
   // Variant spellings are one line, shown under the spelling used most often.
-  return [...counts.values()]
-    .map(({ count, spellings }) => ({
-      name: [...spellings.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0],
+  const entries = [...counts.entries()].map(([key, { count, spellings }]) => {
+    const ranked = [...spellings.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
+    return { key, name: ranked[0], count, variants: ranked.slice(1) };
+  });
+  return entries
+    .map(({ key, name, count, variants }) => ({
+      name,
       count,
+      variants,
+      // Different keys one letter apart (Keel / Keil) are probably the same family spelled differently.
+      similar: entries
+        .filter((other) => other.key !== key && key.length >= 3 && withinOneEdit(key, other.key))
+        .map((other) => other.name),
     }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }

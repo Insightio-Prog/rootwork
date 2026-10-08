@@ -6,7 +6,7 @@ import { MAX_FAMILY_LINES, normalizeFamilyName } from "../tree/layout";
 type ViewMenuProps = {
   x: number;
   y: number;
-  surnames: { name: string; count: number }[];
+  surnames: { name: string; count: number; variants?: string[]; similar?: string[] }[];
   currentSurnames: string[];
   onTidy: () => void;
   onWholeTree: () => void;
@@ -31,7 +31,12 @@ export function ViewMenu({
   const atLimit = picked.length >= MAX_FAMILY_LINES;
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return surnames.filter((item) => !needle || item.name.toLowerCase().includes(needle));
+    return surnames.filter(
+      (item) =>
+        !needle ||
+        item.name.toLowerCase().includes(needle) ||
+        (item.variants ?? []).some((variant) => variant.toLowerCase().includes(needle)),
+    );
   }, [query, surnames]);
 
   useLayoutEffect(() => {
@@ -117,7 +122,15 @@ export function ViewMenu({
                   disabled={!checked && atLimit}
                   onChange={() => toggle(item.name)}
                 />
-                <span>{item.name}</span>
+                <span>
+                  {item.name}
+                  {item.variants?.length ? (
+                    <small className="view-menu-variants"> incl. {item.variants.join(", ")}</small>
+                  ) : null}
+                  {item.similar?.length ? (
+                    <small className="view-menu-variants"> · similar: {item.similar.join(", ")}</small>
+                  ) : null}
+                </span>
                 <span className="view-menu-count">{item.count}</span>
               </label>
             );

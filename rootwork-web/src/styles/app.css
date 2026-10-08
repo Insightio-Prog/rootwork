@@ -3165,3 +3165,5 @@ body {
 .source-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .source-link { color: var(--color-accent); font-size: 13px; text-decoration: none; line-height: 1.35; }
 .source-link:hover { text-decoration: underline; }
+
+.view-menu-variants { display: block; font-size: 11px; color: var(--color-neutral-700); font-weight: 400; }
