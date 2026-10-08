@@ -34,6 +34,7 @@ type Pan = {
 type FanChartProps = {
   people: Record<string, Person>;
   homeId: string;
+  onMakeHome?: (id: string) => void;
   selectedId: string | null;
   panelOpen: boolean;
   maxGenerations: number;
@@ -74,6 +75,7 @@ function wrapWords(text: string, maxChars: number, maxLines: number): string[] {
 export function FanChart({
   people,
   homeId,
+  onMakeHome,
   selectedId,
   panelOpen,
   maxGenerations,
@@ -432,6 +434,15 @@ export function FanChart({
           x={menu.x}
           y={menu.y}
           canAddParent={people[menu.personId].parentIds.length < 2}
+          onMakeHome={
+            onMakeHome && menu.personId !== homeId
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onMakeHome(personId);
+                }
+              : undefined
+          }
           onAdd={(kind) => {
             const personId = menu.personId;
             setMenu(null);

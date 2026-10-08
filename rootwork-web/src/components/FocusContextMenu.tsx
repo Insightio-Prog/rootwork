@@ -7,6 +7,7 @@ type FocusContextMenuProps = {
   onViewProfile: () => void;
   onCollapse: () => void;
   onLifeStory?: () => void;
+  onMakeHome?: () => void;
   onClose: () => void;
 };
 
@@ -16,6 +17,7 @@ export function FocusContextMenu({
   onViewProfile,
   onCollapse,
   onLifeStory,
+  onMakeHome,
   onClose,
 }: FocusContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -70,6 +72,18 @@ export function FocusContextMenu({
           }}
         >
           Life story
+        </button>
+      )}
+      {onMakeHome && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onMakeHome();
+            onClose();
+          }}
+        >
+          Make home person
         </button>
       )}
       <button

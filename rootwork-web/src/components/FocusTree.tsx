@@ -29,6 +29,7 @@ type Pan = {
 type FocusTreeProps = {
   people: Record<string, Person>;
   homeId: string;
+  onMakeHome?: (id: string) => void;
   selectedId: string | null;
   locateId?: string | null;
   locateKey?: number;
@@ -50,6 +51,7 @@ function canvasPoint(canvas: HTMLElement, event: { clientX: number; clientY: num
 export function FocusTree({
   people,
   homeId,
+  onMakeHome,
   selectedId,
   locateId = null,
   locateKey = 0,
@@ -352,6 +354,15 @@ export function FocusTree({
           y={menu.y}
           onViewProfile={() => onViewProfile(menu.personId)}
           onCollapse={() => collapseToPerson(menu.personId)}
+          onMakeHome={
+            onMakeHome && menu.personId !== homeId
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onMakeHome(personId);
+                }
+              : undefined
+          }
           onLifeStory={
             hasLifeStory(menu.personId) ? () => onOpenLifeStory(menu.personId) : undefined
           }

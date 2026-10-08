@@ -3172,3 +3172,36 @@ body {
 .vital-link { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--color-accent-700); cursor: pointer; text-decoration: underline; }
 .person-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .person-flag.is-derived { opacity: 0.6; }
+
+.heritage-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: min(720px, max(320px, calc(100% - 340px)));
+  z-index: 3;
+  pointer-events: none;
+}
+.heritage-bar.is-panel-open { left: calc(50% - 212px); width: min(720px, max(320px, calc(100% - 800px))); }
+.heritage-track {
+  display: flex;
+  height: 38px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+}
+.heritage-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  white-space: nowrap;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+.heritage-seg:first-child { border-left: 0; }
+.heritage-text { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; }
+.heritage-text strong { font-weight: 700; }

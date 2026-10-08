@@ -1,4 +1,5 @@
 import { WelcomeCard } from "./WelcomeCard";
+import { HeritageBar } from "./HeritageBar";
 import { useEffect, useMemo, useState } from "react";
 import {
   FAMILY_LAYOUT,
@@ -523,6 +524,7 @@ export function FamilyTreeCanvas({
           <FanChart
             people={chartPeople}
             homeId={homePersonId}
+            onMakeHome={readOnly ? undefined : onMakeHome}
             selectedId={selectedId}
             panelOpen={panelOpen && Boolean(selected)}
             maxGenerations={fanGenerations}
@@ -540,6 +542,7 @@ export function FamilyTreeCanvas({
             key={homePersonId}
             people={chartPeople}
             homeId={homePersonId}
+            onMakeHome={readOnly ? undefined : onMakeHome}
             selectedId={selectedId}
             locateId={locateId}
             locateKey={locateKey}
@@ -552,6 +555,7 @@ export function FamilyTreeCanvas({
           <AncestorTree
             people={chartPeople}
             homeId={homePersonId}
+            onMakeHome={readOnly ? undefined : onMakeHome}
             selectedId={selectedId}
             locateId={locateId}
             locateKey={locateKey}
@@ -706,6 +710,10 @@ export function FamilyTreeCanvas({
           readOnly={readOnly}
         />
       )}
+
+      {homePersonId && people[homePersonId] ? (
+        <HeritageBar people={people} homeId={homePersonId} panelOpen={panelOpen && Boolean(selected)} />
+      ) : null}
 
       {viewMenu && (
         <ViewMenu

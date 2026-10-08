@@ -42,6 +42,7 @@ type View = {
 type AncestorTreeProps = {
   people: Record<string, Person>;
   homeId: string;
+  onMakeHome?: (id: string) => void;
   selectedId: string | null;
   locateId?: string | null;
   locateKey?: number;
@@ -137,6 +138,7 @@ function highlightedIds(group: string[], selectedId: string | null) {
 export function AncestorTree({
   people,
   homeId,
+  onMakeHome,
   selectedId,
   locateId = null,
   locateKey = 0,
@@ -881,6 +883,15 @@ export function AncestorTree({
           x={menu.x}
           y={menu.y}
           canAddParent={people[menu.personId].parentIds.length < 2}
+          onMakeHome={
+            onMakeHome && !readOnly && menu.personId !== homeId
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onMakeHome(personId);
+                }
+              : undefined
+          }
           collapseLabel={
             extraCountFor(menu.personId) > 0
               ? familyIsCollapsed(collapsedIds, people, menu.personId)
