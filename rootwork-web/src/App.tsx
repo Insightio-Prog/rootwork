@@ -37,6 +37,7 @@ import { chartStorageKey } from "./state/workspaces";
 import { NAV_LABELS, useTreeUi } from "./state/useTreeUi";
 import { usePhone } from "./state/usePhone";
 import { PhoneTree } from "./components/PhoneTree";
+import { PhoneFan } from "./components/PhoneFan";
 
 export default function App() {
   const store = useTreeStore();
@@ -159,7 +160,14 @@ export default function App() {
           onOpenSettings={() => setSettingsOpen(true)}
           onLocatePerson={ui.locatePerson}
         />
-        {ui.nav === "tree" && phone ? (
+        {ui.nav === "fan" && phone ? (
+          <PhoneFan
+            key={store.workspaces.currentId}
+            people={people}
+            homePersonId={homePersonId}
+            onOpenInFamily={ui.locatePerson}
+          />
+        ) : ui.nav === "tree" && phone ? (
           <PhoneTree
             key={store.workspaces.currentId}
             people={people}

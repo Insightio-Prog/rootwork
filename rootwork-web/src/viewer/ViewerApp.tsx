@@ -7,10 +7,11 @@ import { hydrateStories } from "../stories";
 import { parseTree } from "../state/useTreeStore";
 import { usePhone } from "../state/usePhone";
 import { PhoneTree } from "../components/PhoneTree";
-import { BrandMark, IconHome, IconStory, IconTree } from "../icons";
+import { PhoneFan } from "../components/PhoneFan";
+import { BrandMark, IconFan, IconHome, IconStory, IconTree } from "../icons";
 import type { HtmlExportPayload, HtmlExportTree } from "../export/htmlExport";
 
-type ViewerNav = "home" | "tree" | "story";
+type ViewerNav = "home" | "tree" | "fan" | "story";
 
 const ignored = () => {};
 
@@ -27,6 +28,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [storyPersonId, setStoryPersonId] = useState<string | null>(null);
   const phone = usePhone();
+  const [locate, setLocate] = useState<{ id: string; n: number } | null>(null);
 
   const entry = useMemo(
     () => trees.find((tree) => tree.id === treeId) ?? trees[0],
@@ -85,6 +87,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
           </select>
         </label>
         <nav className="sidebar-nav">
+          {trees.length > 1 && (
           <button
             type="button"
             className={`nav-item${nav === "home" ? " is-active" : ""}`}
@@ -93,6 +96,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             <IconHome />
             <span className="nav-label">Home</span>
           </button>
+          )}
           <button
             type="button"
             className={`nav-item${nav === "tree" ? " is-active" : ""}`}
@@ -101,6 +105,16 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             <IconTree />
             <span className="nav-label">{phone ? "Family" : "Family Tree"}</span>
           </button>
+          {phone && (
+            <button
+              type="button"
+              className={`nav-item${nav === "fan" ? " is-active" : ""}`}
+              onClick={() => setNav("fan")}
+            >
+              <IconFan />
+              <span className="nav-label">Fan</span>
+            </button>
+          )}
           <button
             type="button"
             className={`nav-item${nav === "story" ? " is-active" : ""}`}
@@ -116,8 +130,8 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
       </aside>
       <main className="app-main">
         <header className="app-header">
-          <h4>{nav === "tree" ? treeTitle : nav === "story" ? "Life Story" : "Your trees"}</h4>
-          {nav === "tree" ? <span className="tag tag-outline people-count">{peopleCountLabel(personCount)}</span> : null}
+          <h4>{nav === "tree" || nav === "fan" ? treeTitle : nav === "story" ? "Life Story" : "Your trees"}</h4>
+          {nav === "tree" || nav === "fan" ? <span className="tag tag-outline people-count">{peopleCountLabel(personCount)}</span> : null}
         </header>
         {nav === "home" ? (
           <section className="home-page">
@@ -146,11 +160,23 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             onPick={setStoryPersonId}
             onChangePerson={() => setStoryPersonId(null)}
           />
+        ) : nav === "fan" ? (
+          <PhoneFan
+            key={entry.id}
+            people={people}
+            homePersonId={homePersonId}
+            onOpenInFamily={(id) => {
+              setLocate((current) => ({ id, n: (current?.n ?? 0) + 1 }));
+              setNav("tree");
+            }}
+          />
         ) : phone ? (
           <PhoneTree
             key={entry.id}
             people={people}
             homePersonId={homePersonId}
+            locateId={locate?.id}
+            locateKey={locate?.n}
             onOpenLifeStory={(id) => {
               setStoryPersonId(id);
               setNav("story");

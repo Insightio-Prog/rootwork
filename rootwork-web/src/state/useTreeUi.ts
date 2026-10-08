@@ -5,6 +5,7 @@ import type { PersonLink } from "./useTreeStore";
 export type NavId =
   | "home"
   | "tree"
+  | "fan"
   | "timeline"
   | "map"
   | "media"
@@ -15,6 +16,7 @@ export type NavId =
 export const NAV_LABELS: Record<NavId, string> = {
   home: "Home",
   tree: "Family Tree",
+  fan: "Fan Chart",
   timeline: "Timeline",
   map: "Map",
   media: "Media",

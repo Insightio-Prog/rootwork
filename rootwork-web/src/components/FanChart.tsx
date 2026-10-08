@@ -44,6 +44,7 @@ type View = { zoom: number; x: number; y: number };
 
 type Pan = {
   pointerId: number;
+  moved: boolean;
   startX: number;
   startY: number;
   originX: number;
@@ -62,6 +63,12 @@ type FanChartProps = {
   onSelect: (id: string) => void;
   onAddParent: (childId: string, gender?: Gender) => void;
   onAddRelative: (personId: string, kind: RelativeKind) => void;
+  /** Look only: no menus, no adding people. */
+  readOnly?: boolean;
+  /** Phone layout: the colour key hides behind a Key button. */
+  compact?: boolean;
+  /** Ask the chart to centre on someone else's ancestors (n changes each time). */
+  rootRequest?: { id: string; n: number } | null;
 };
 
 function clampZoom(value: number) {
@@ -104,6 +111,9 @@ export function FanChart({
   onSelect,
   onAddParent,
   onAddRelative,
+  readOnly = false,
+  compact = false,
+  rootRequest = null,
 }: FanChartProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<Pan | null>(null);
@@ -115,8 +125,15 @@ export function FanChart({
   const [mode, setMode] = useState<FanColourMode>(loadMode);
   const [rootOverride, setRootOverride] = useState<string | null>(null);
   const [hover, setHover] = useState<{ person: Person; x: number; y: number } | null>(null);
+  const [showKey, setShowKey] = useState(false);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+  const justPannedRef = useRef(false);
 
   useEffect(() => setRootOverride(null), [homeId]);
+  useEffect(() => {
+    if (rootRequest && people[rootRequest.id]) setRootOverride(rootRequest.id === homeId ? null : rootRequest.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rootRequest?.n]);
   useEffect(() => {
     try {
       localStorage.setItem(MODE_KEY, mode);
@@ -204,14 +221,53 @@ export function FanChart({
       zoomTo(viewRef.current.zoom * factor, point.x, point.y);
     }
     canvas.addEventListener("wheel", onWheel, { passive: false });
-    return () => canvas.removeEventListener("wheel", onWheel);
+
+    // Two fingers pinch to zoom.
+    function span(event: TouchEvent) {
+      const [a, b] = [event.touches[0], event.touches[1]];
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+    function onTouchStart(event: TouchEvent) {
+      if (event.touches.length !== 2) return;
+      panRef.current = null;
+      setPanning(false);
+      pinchRef.current = { dist: Math.max(1, span(event)), zoom: viewRef.current.zoom };
+    }
+    function onTouchMove(event: TouchEvent) {
+      const pinch = pinchRef.current;
+      const host = canvasRef.current;
+      if (!pinch || !host || event.touches.length !== 2) return;
+      event.preventDefault();
+      const rect = host.getBoundingClientRect();
+      const [a, b] = [event.touches[0], event.touches[1]];
+      zoomTo(
+        pinch.zoom * (span(event) / pinch.dist),
+        (a.clientX + b.clientX) / 2 - rect.left,
+        (a.clientY + b.clientY) / 2 - rect.top,
+      );
+    }
+    function onTouchEnd(event: TouchEvent) {
+      if (event.touches.length < 2) pinchRef.current = null;
+    }
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      canvas.removeEventListener("touchcancel", onTouchEnd);
+    };
   }, []);
 
   useEffect(() => {
     function onMove(event: PointerEvent) {
       const pan = panRef.current;
-      if (!pan || event.pointerId !== pan.pointerId) return;
+      if (!pan || event.pointerId !== pan.pointerId || pinchRef.current) return;
       event.preventDefault();
+      if (Math.hypot(event.clientX - pan.startX, event.clientY - pan.startY) > 8) pan.moved = true;
       setViewNow({
         ...viewRef.current,
         x: pan.originX + (event.clientX - pan.startX),
@@ -223,7 +279,17 @@ export function FanChart({
       if (!pan || event.pointerId !== pan.pointerId) return;
       panRef.current = null;
       setPanning(false);
-      canvasRef.current?.releasePointerCapture(event.pointerId);
+      if (pan.moved) {
+        justPannedRef.current = true;
+        window.setTimeout(() => {
+          justPannedRef.current = false;
+        }, 60);
+      }
+      try {
+        canvasRef.current?.releasePointerCapture(event.pointerId);
+      } catch {
+        /* touch pointers are never captured here */
+      }
     }
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
@@ -238,8 +304,12 @@ export function FanChart({
   function handleCanvasPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 && event.button !== 1) return;
     const target = event.target as HTMLElement;
-    if (target.closest(".tree-zoom, .card-menu, .fan-seg, .fan-hub, .fan-more, .fan-modes, .fan-legend")) return;
+    const touch = event.pointerType === "touch";
+    if (target.closest(".tree-zoom, .card-menu, .fan-modes, .fan-legend, .fan-key")) return;
+    // A finger can drag the chart even when it lands on a wedge; a mouse drags only the background.
+    if (!touch && target.closest(".fan-seg, .fan-hub, .fan-more")) return;
     panRef.current = {
+      moved: false,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
@@ -247,7 +317,7 @@ export function FanChart({
       originY: viewRef.current.y,
     };
     setPanning(true);
-    canvasRef.current?.setPointerCapture(event.pointerId);
+    if (!touch) canvasRef.current?.setPointerCapture(event.pointerId);
   }
 
   const legend = useMemo(() => {
@@ -313,7 +383,7 @@ export function FanChart({
             const path = donutPath(metrics.cx, metrics.cy, inner, outer, a0, a1);
             const filled = Boolean(slot.person);
             const selected = Boolean(slot.person && slot.person.id === selectedId);
-            const canAdd = !filled && Boolean(slot.childId);
+            const canAdd = !filled && !readOnly && Boolean(slot.childId);
             const className = [
               "fan-seg",
               filled ? branchClass(slot.generation, slot.index) : "fan-seg--empty",
@@ -356,9 +426,9 @@ export function FanChart({
                 key={`${slot.generation}-${slot.index}`}
                 className={className}
                 onPointerDown={(event) => {
-                  event.stopPropagation();
+                  if (event.pointerType !== "touch") event.stopPropagation();
                   const person = slot.person;
-                  if (person)
+                  if (person && !readOnly)
                     startLongPress(event, (x, y) => {
                       onSelect(person.id);
                       setMenu({ personId: person.id, x, y });
@@ -366,20 +436,21 @@ export function FanChart({
                 }}
                 onPointerMove={(event) => {
                   const host = canvasRef.current;
-                  if (slot.person && host) setHover({ person: slot.person, ...canvasPoint(host, event) });
+                  if (slot.person && host && event.pointerType !== "touch") setHover({ person: slot.person, ...canvasPoint(host, event) });
                 }}
                 onPointerLeave={() => setHover(null)}
                 onDoubleClick={() => {
                   if (slot.person) setRootOverride(slot.person.id === homeId ? null : slot.person.id);
                 }}
                 onClick={() => {
-                  if (longPressJustFired()) return;
+                  if (longPressJustFired() || justPannedRef.current) return;
                   if (slot.person) onSelect(slot.person.id);
-                  else if (slot.childId) onAddParent(slot.childId, slot.role === "father" ? "male" : "female");
+                  else if (slot.childId && !readOnly) onAddParent(slot.childId, slot.role === "father" ? "male" : "female");
                 }}
                 onContextMenu={(event) => {
                   if (!slot.person) return;
                   event.preventDefault();
+                  if (readOnly) return;
                   onSelect(slot.person.id);
                   setMenu({ personId: slot.person.id, x: event.clientX, y: event.clientY });
                 }}
@@ -461,11 +532,16 @@ export function FanChart({
 
           <g
             className={`fan-hub${selectedId === home.id ? " is-selected" : ""}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onSelect(home.id)}
+            onPointerDown={(event) => {
+              if (event.pointerType !== "touch") event.stopPropagation();
+            }}
+            onClick={() => {
+              if (!justPannedRef.current) onSelect(home.id);
+            }}
             onDoubleClick={() => setRootOverride(null)}
             onContextMenu={(event) => {
               event.preventDefault();
+              if (readOnly) return;
               onSelect(home.id);
               setMenu({ personId: home.id, x: event.clientX, y: event.clientY });
             }}
@@ -508,8 +584,10 @@ export function FanChart({
                 <g
                   key={`more-${slot.generation}-${slot.index}`}
                   className="fan-more"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={() => slot.person && onSelect(slot.person.id)}
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== "touch") event.stopPropagation();
+                  }}
+                  onClick={() => slot.person && !justPannedRef.current && onSelect(slot.person.id)}
                 >
                   <title>More ancestors beyond this view</title>
                   <circle cx={point.x} cy={point.y} r={11} />
@@ -537,7 +615,13 @@ export function FanChart({
             {item.label}
           </button>
         ))}
+        {compact && (
+          <button type="button" className={`fan-key${showKey ? " is-active" : ""}`} onClick={() => setShowKey((v) => !v)}>
+            Key
+          </button>
+        )}
       </div>
+      {(!compact || showKey) && (
       <div className={`fan-legend${panelOpen ? " is-panel-open" : ""}`} aria-label="Colour key">
         <div className="fan-legend-title">{legend.title}</div>
         <div className="fan-legend-note">{legend.note}</div>
@@ -549,6 +633,7 @@ export function FanChart({
           </div>
         ))}
       </div>
+      )}
       {hover && (
         <div className="fan-hover" style={{ left: hover.x + 16, top: hover.y + 16 }}>
           <strong>{displayName(hover.person)}</strong>

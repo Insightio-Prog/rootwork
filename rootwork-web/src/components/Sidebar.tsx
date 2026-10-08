@@ -3,6 +3,7 @@ import {
   BrandMark,
   IconAsk,
   IconExport,
+  IconFan,
   IconHome,
   IconMap,
   IconMedia,
@@ -15,6 +16,7 @@ import { NAV_LABELS, type NavId } from "../state/useTreeUi";
 const ITEMS: { id: NavId; icon: ReactNode }[] = [
   { id: "home", icon: <IconHome /> },
   { id: "tree", icon: <IconTree /> },
+  { id: "fan", icon: <IconFan /> },
   { id: "story", icon: <IconStory /> },
   { id: "map", icon: <IconMap /> },
   { id: "media", icon: <IconMedia /> },
@@ -22,8 +24,8 @@ const ITEMS: { id: NavId; icon: ReactNode }[] = [
   { id: "export", icon: <IconExport /> },
 ];
 
-const PHONE_ITEMS = new Set<NavId>(["home", "tree", "story", "media", "export"]);
-const PHONE_LABELS: Partial<Record<NavId, string>> = { tree: "Family", story: "Stories", export: "Backup" };
+const PHONE_ITEMS = new Set<NavId>(["home", "tree", "fan", "story", "media", "export"]);
+const PHONE_LABELS: Partial<Record<NavId, string>> = { tree: "Family", fan: "Fan", story: "Stories", export: "Backup" };
 
 type SidebarProps = {
   collapsed: boolean;
@@ -53,7 +55,7 @@ export function Sidebar({
         {!collapsed && <span className="brand-name">Rootwork</span>}
       </div>
 
-      {ITEMS.filter((item) => !phone || PHONE_ITEMS.has(item.id)).map((item) => (
+      {ITEMS.filter((item) => (phone ? PHONE_ITEMS.has(item.id) : item.id !== "fan")).map((item) => (
         <Fragment key={item.id}>
           <button
             type="button"
@@ -77,7 +79,7 @@ export function Sidebar({
               aria-label="Ask Claude"
             >
               <IconAsk />
-              {!collapsed && <span className="nav-label">Ask Claude</span>}
+              {!collapsed && <span className="nav-label">{phone ? "Ask" : "Ask Claude"}</span>}
             </button>
           ) : null}
         </Fragment>

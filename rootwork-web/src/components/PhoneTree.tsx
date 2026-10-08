@@ -46,15 +46,42 @@ function PersonRow({ person, role, onOpen }: { person: Person; role?: string; on
   );
 }
 
-function Section({ title, people, role, onOpen }: { title: string; people: Person[]; role?: (p: Person) => string; onOpen: (id: string) => void }) {
+function Section({
+  title,
+  people,
+  role,
+  onOpen,
+  grand,
+}: {
+  title: string;
+  people: Person[];
+  role?: (p: Person) => string;
+  onOpen: (id: string) => void;
+  grand?: (p: Person) => Person[];
+}) {
   if (people.length === 0) return null;
   return (
     <section className="phone-section">
       <h3>{title}</h3>
       <div className="phone-rows">
-        {people.map((person) => (
-          <PersonRow key={person.id} person={person} role={role?.(person)} onOpen={onOpen} />
-        ))}
+        {people.map((person) => {
+          const above = grand?.(person) ?? [];
+          return (
+            <div key={person.id} className="phone-row-group">
+              <PersonRow person={person} role={role?.(person)} onOpen={onOpen} />
+              {above.length > 0 && (
+                <div className="phone-grand">
+                  <span>Their parents:</span>
+                  {above.map((up) => (
+                    <button key={up.id} type="button" onClick={() => onOpen(up.id)}>
+                      {displayName(up)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -169,6 +196,7 @@ export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLif
         title="Parents"
         people={parents}
         role={(p) => (p.gender === "male" ? "Father" : "Mother")}
+        grand={(p) => orderedParents(people, p)}
         onOpen={go}
       />
       <Section title={spouses.length > 1 ? "Partners" : "Partner"} people={spouses} onOpen={go} />
