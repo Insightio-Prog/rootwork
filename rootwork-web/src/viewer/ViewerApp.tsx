@@ -5,6 +5,8 @@ import { peopleCountLabel } from "../data/people";
 import { setExportMedia } from "../media/store";
 import { hydrateStories } from "../stories";
 import { parseTree } from "../state/useTreeStore";
+import { usePhone } from "../state/usePhone";
+import { PhoneTree } from "../components/PhoneTree";
 import { BrandMark, IconHome, IconStory, IconTree } from "../icons";
 import type { HtmlExportPayload, HtmlExportTree } from "../export/htmlExport";
 
@@ -24,6 +26,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [storyPersonId, setStoryPersonId] = useState<string | null>(null);
+  const phone = usePhone();
 
   const entry = useMemo(
     () => trees.find((tree) => tree.id === treeId) ?? trees[0],
@@ -62,8 +65,8 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   }
 
   return (
-    <div className="app-shell viewer-shell">
-      <aside className="app-sidebar is-expanded">
+    <div className={`app-shell viewer-shell${phone ? " is-phone" : ""}`}>
+      <aside className={`app-sidebar is-expanded${phone ? " is-phone" : ""}`}>
         <div className="sidebar-brand">
           <div className="brand-mark">
             <BrandMark />
@@ -96,7 +99,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             onClick={() => setNav("tree")}
           >
             <IconTree />
-            <span className="nav-label">Family Tree</span>
+            <span className="nav-label">{phone ? "Family" : "Family Tree"}</span>
           </button>
           <button
             type="button"
@@ -107,7 +110,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             }}
           >
             <IconStory />
-            <span className="nav-label">Life Story</span>
+            <span className="nav-label">{phone ? "Stories" : "Life Story"}</span>
           </button>
         </nav>
       </aside>
@@ -142,6 +145,17 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             personId={storyPersonId}
             onPick={setStoryPersonId}
             onChangePerson={() => setStoryPersonId(null)}
+          />
+        ) : phone ? (
+          <PhoneTree
+            key={entry.id}
+            people={people}
+            homePersonId={homePersonId}
+            onOpenLifeStory={(id) => {
+              setStoryPersonId(id);
+              setNav("story");
+            }}
+            onGoToBackup={() => setNav("home")}
           />
         ) : (
           <FamilyTreeCanvas

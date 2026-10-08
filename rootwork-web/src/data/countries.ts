@@ -169,5 +169,7 @@ export function countryNameFor(code: string | null): string {
 }
 
 export function flagUrl(code: string): string {
-  return `/flags/${code}.svg`;
+  // A saved .html file has no /flags folder next to it, so it borrows the flags from the live site.
+  const base = typeof location !== "undefined" && location.protocol === "file:" ? "https://rootwork.insightio.co.uk" : "";
+  return `${base}/flags/${code}.svg`;
 }

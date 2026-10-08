@@ -3382,3 +3382,8 @@ body {
 .is-phone .dialog-backdrop { position: fixed; inset: 0; z-index: 70; }
 .is-phone .ask-claude-head { flex-wrap: wrap; } .is-phone .ask-claude-head > div:first-child { flex: 1 1 100%; }
 .person-card, .fan-seg { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* Shared view-only page on a phone: hide the desktop tree picker (Home lists the trees). */
+.is-phone .viewer-kicker, .is-phone .viewer-tree-select { display: none; }
+.is-phone .sidebar-nav { display: flex; flex: 1; flex-direction: row; gap: 0; padding: 0; }
+.is-phone .phone-row .phone-row-flag:not(.has-flag) { display: none; }
