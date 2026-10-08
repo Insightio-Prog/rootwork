@@ -244,6 +244,7 @@ export function useTreeStore() {
             living: draft.living,
             death: draft.living ? "" : draft.death.trim(),
             deathPlace: draft.living ? "" : draft.deathPlace.trim(),
+            nationality: (draft.nationality ?? "").trim(),
           },
         },
       };

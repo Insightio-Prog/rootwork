@@ -155,7 +155,7 @@ export function PersonPanel({
             }}
             aria-label={person.flag ? "Change flag" : "Add flag"}
           >
-            <PersonFlag flag={person.flag ?? null} className="panel-flag-frame" />
+            <PersonFlag flag={person.flag ?? null} nationality={person.nationality} className="panel-flag-frame" />
             {!readOnly && (
             <input
               ref={flagInputRef}
@@ -184,6 +184,17 @@ export function PersonPanel({
                   <div className="vital-place">{person.deathPlace || "Place not recorded"}</div>
                 </>
               )}
+            </div>
+          </div>
+          <div className="vital-row">
+            <span className="vital-icon is-nationality">⚑</span>
+            <div>
+              <div className="vital-date">{person.nationality || "Nationality unknown"}</div>
+              {!person.nationality && !readOnly ? (
+                <button type="button" className="vital-link" onClick={() => onEdit(person.id)}>
+                  Add nationality
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

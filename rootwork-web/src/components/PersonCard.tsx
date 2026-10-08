@@ -42,7 +42,7 @@ export function PersonCard({
         <div className="person-name">{cardName(person)}</div>
         <div className="person-meta">
           <div className="person-years">{yearsLabel(person)}</div>
-          <PersonFlag flag={person.flag ?? null} layoutId="tree-flag" />
+          <PersonFlag flag={person.flag ?? null} nationality={person.nationality} layoutId="tree-flag" />
         </div>
       </div>
     </button>

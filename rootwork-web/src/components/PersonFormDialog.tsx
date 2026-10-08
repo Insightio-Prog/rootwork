@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { COUNTRY_NAMES } from "../data/countries";
 import { displayName, emptyDraft, yearsLabel, type Gender, type Person, type PersonDraft } from "../data/people";
 import { PersonAvatar } from "./PersonAvatar";
 
@@ -253,6 +254,22 @@ export function PersonFormDialog({
                   value={draft.birthPlace}
                   onChange={(event) => update("birthPlace", event.target.value)}
                 />
+              </div>
+              <div className="field field-span">
+                <label htmlFor="nationality">Nationality</label>
+                <input
+                  id="nationality"
+                  className="input"
+                  list="nationality-options"
+                  placeholder="e.g. Welsh, Irish, English"
+                  value={draft.nationality ?? ""}
+                  onChange={(event) => update("nationality", event.target.value)}
+                />
+                <datalist id="nationality-options">
+                  {COUNTRY_NAMES.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </div>
               <div className="field field-span">
                 <label>Death</label>

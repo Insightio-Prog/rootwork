@@ -366,6 +366,10 @@ function mergeMatchedPerson(
   const newSources = (incoming.sources ?? []).filter((item) => !known.has(item.url || item.title));
   if (newSources.length) filled = true;
   next.sources = [...(next.sources ?? []), ...newSources.map((item) => ({ ...item, id: crypto.randomUUID() }))];
+  if (!next.nationality?.trim() && incoming.nationality?.trim()) {
+    next.nationality = incoming.nationality;
+    filled = true;
+  }
   if (!next.notes?.trim() && incoming.notes?.trim()) {
     next.notes = incoming.notes;
     filled = true;

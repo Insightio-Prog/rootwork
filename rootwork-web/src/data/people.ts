@@ -88,6 +88,7 @@ export type Person = {
   notes: string;
   altNames: string[];
   sources: SourceLink[];
+  nationality: string;
 };
 
 export type PersonDraft = {
@@ -99,6 +100,7 @@ export type PersonDraft = {
   death: string;
   deathPlace: string;
   living: boolean;
+  nationality?: string;
 };
 
 export const TREE_TITLE = "My Family";
@@ -112,6 +114,7 @@ export const emptyDraft = (overrides: Partial<PersonDraft> = {}): PersonDraft =>
   death: "",
   deathPlace: "",
   living: true,
+  nationality: "",
   ...overrides,
 });
 
@@ -140,6 +143,7 @@ export function createPerson(draft: PersonDraft): Person {
     notes: "",
     altNames: [],
     sources: [],
+    nationality: (draft.nationality ?? "").trim(),
   };
 }
 
@@ -189,6 +193,7 @@ export function draftFromPerson(person: Person): PersonDraft {
     death: person.death,
     deathPlace: person.deathPlace,
     living: person.living,
+    nationality: person.nationality ?? "",
   };
 }
 
@@ -816,6 +821,7 @@ export function normalizePerson(
     | "notes"
     | "altNames"
     | "sources"
+    | "nationality"
   > & {
     living?: boolean;
     residences?: Residence[];
@@ -829,6 +835,7 @@ export function normalizePerson(
     notes?: string;
     altNames?: string[];
     sources?: SourceLink[];
+    nationality?: string;
   },
 ): Person {
   const living =
@@ -880,6 +887,7 @@ export function normalizePerson(
       ? person.altNames.filter((name): name is string => typeof name === "string" && Boolean(name.trim()))
       : [],
     sources: normalizeSources(person.sources),
+    nationality: typeof person.nationality === "string" ? person.nationality.trim() : "",
   };
 }
 
