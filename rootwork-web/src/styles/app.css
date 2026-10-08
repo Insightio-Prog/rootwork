@@ -3271,3 +3271,7 @@ body {
 .timeline-mode button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; color: var(--color-neutral-700); }
 .timeline-mode button.is-active { background: var(--color-surface); color: var(--color-accent-800); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)); }
 .chart-toolbar [data-tip]:first-child::after { left: 0; transform: none; }
+
+/* Stop the browser starting a text/SVG drag (red "not allowed" cursor) while panning the timeline */
+.timeline-canvas, .timeline-canvas * { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+.timeline-canvas { touch-action: none; }

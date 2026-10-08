@@ -299,6 +299,7 @@ export function TimelinePage({ treeId, people, homePersonId }: TimelinePageProps
         ref={canvasRef}
         className={`timeline-canvas${panning ? " is-panning" : ""}`}
         onPointerDown={onPointerDown}
+        onDragStart={(event) => event.preventDefault()}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
