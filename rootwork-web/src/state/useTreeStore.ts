@@ -727,6 +727,43 @@ export function useTreeStore() {
     });
   }, []);
 
+  const addPersonNote = useCallback((personId: string, text: string) => {
+    const body = text.trim();
+    if (!body) return;
+    const now = new Date().toISOString();
+    setTree((current) => {
+      const person = current.people[personId];
+      if (!person) return current;
+      const note = { id: crypto.randomUUID(), text: body, createdAt: now, updatedAt: now };
+      return {
+        ...current,
+        people: { ...current.people, [personId]: { ...person, stickyNotes: [...(person.stickyNotes ?? []), note] } },
+      };
+    });
+  }, []);
+
+  const updatePersonNote = useCallback((personId: string, noteId: string, text: string) => {
+    const body = text.trim();
+    if (!body) return;
+    setTree((current) => {
+      const person = current.people[personId];
+      if (!person) return current;
+      const notes = (person.stickyNotes ?? []).map((note) =>
+        note.id === noteId ? { ...note, text: body, updatedAt: new Date().toISOString() } : note,
+      );
+      return { ...current, people: { ...current.people, [personId]: { ...person, stickyNotes: notes } } };
+    });
+  }, []);
+
+  const removePersonNote = useCallback((personId: string, noteId: string) => {
+    setTree((current) => {
+      const person = current.people[personId];
+      if (!person) return current;
+      const notes = (person.stickyNotes ?? []).filter((note) => note.id !== noteId);
+      return { ...current, people: { ...current.people, [personId]: { ...person, stickyNotes: notes } } };
+    });
+  }, []);
+
   const removePersonMedia = useCallback((personId: string, mediaId: string) => {
     setTree((current) => {
       const person = current.people[personId];
@@ -856,6 +893,9 @@ export function useTreeStore() {
     setFlag,
     addPersonMedia,
     removePersonMedia,
+    addPersonNote,
+    updatePersonNote,
+    removePersonNote,
     addTodo,
     removeTodo,
     setTodoDone,

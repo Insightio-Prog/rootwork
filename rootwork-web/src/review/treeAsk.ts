@@ -96,6 +96,7 @@ function extraPerson(people: Record<string, Person>, person: Person): string {
   const siblings = siblingsOf(people, person);
   if (siblings.length) lines.push(`Siblings: ${names(siblings)}`);
   if (person.notes?.trim()) lines.push(`Notes: ${clip(person.notes, 2200)}`);
+  for (const note of person.stickyNotes ?? []) lines.push(`Family note: ${clip(note.text, 1200)}`);
   for (const job of person.jobs.slice(0, 8)) {
     lines.push(`Job: ${job.title}${job.detail ? ` — ${clip(job.detail, 160)}` : ""}`);
   }

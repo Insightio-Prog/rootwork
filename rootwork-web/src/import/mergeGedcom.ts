@@ -296,6 +296,7 @@ function mergeMatchedPerson(
     residences: dest.residences.map((item) => ({ ...item })),
     notableEvents: dest.notableEvents.map((item) => ({ ...item })),
     altNames: [...(dest.altNames ?? [])],
+    stickyNotes: (dest.stickyNotes ?? []).map((item) => ({ ...item })),
     sources: (dest.sources ?? []).map((item) => ({ ...item })),
     jobs: dest.jobs.map((item) => ({ ...item })),
     military: dest.military.map((item) => ({
@@ -686,6 +687,7 @@ function remapPerson(person: Person): Person {
     residences: person.residences.map(cloneResidence),
     notableEvents: person.notableEvents.map(cloneEvent),
     altNames: [...(person.altNames ?? [])],
+    stickyNotes: (person.stickyNotes ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     sources: (person.sources ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
     jobs: person.jobs.map((job) => ({ ...job, id: crypto.randomUUID() })),
     military: person.military.map(cloneMilitary),

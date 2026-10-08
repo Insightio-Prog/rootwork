@@ -9,6 +9,7 @@ import {
   familyLayoutConstants,
 } from "../chart/familyLayout";
 import { displayName, type Gender, type Person } from "../data/people";
+import { NotesDialog } from "./NotesDialog";
 import { IconEye, IconHome, IconPanel, IconPencil, IconSettings, IconTrash } from "../icons";
 import { FAN_MAX_GENERATIONS } from "../tree/fan";
 import {
@@ -235,6 +236,9 @@ export function tidyChartSettings(current: ChartSettings, homePersonId: string):
 }
 
 type FamilyTreeCanvasProps = {
+  onAddNote?: (personId: string, text: string) => void;
+  onUpdateNote?: (personId: string, noteId: string, text: string) => void;
+  onRemoveNote?: (personId: string, noteId: string) => void;
   treeId: string;
   people: Record<string, Person>;
   homePersonId: string | null;
@@ -314,6 +318,9 @@ export function FamilyTreeCanvas({
   onAddSibling,
   onRemoveSibling,
   onMakeHome,
+  onAddNote,
+  onUpdateNote,
+  onRemoveNote,
   onEdit,
   onDelete,
   onAddResidence,
@@ -341,6 +348,7 @@ export function FamilyTreeCanvas({
   const selected = selectedId ? people[selectedId] : undefined;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [viewResetKey, setViewResetKey] = useState(0);
+  const [notesFor, setNotesFor] = useState<string | null>(null);
   const [viewMenu, setViewMenu] = useState<{ x: number; y: number } | null>(null);
   const [connectorGapHint, setConnectorGapHint] = useState<number | null>(null);
   const [chart, setChart] = useState(() =>
@@ -526,6 +534,7 @@ export function FamilyTreeCanvas({
       {homePersonId && people[homePersonId] ? (
         chartKind === "fan" ? (
           <FanChart
+            onOpenNotes={setNotesFor}
             people={chartPeople}
             homeId={homePersonId}
             onMakeHome={readOnly ? undefined : onMakeHome}
@@ -543,6 +552,7 @@ export function FamilyTreeCanvas({
           />
         ) : chartKind === "focus" ? (
           <FocusTree
+            onOpenNotes={setNotesFor}
             key={homePersonId}
             people={chartPeople}
             homeId={homePersonId}
@@ -557,6 +567,7 @@ export function FamilyTreeCanvas({
           />
         ) : (
           <AncestorTree
+            onOpenNotes={setNotesFor}
             people={chartPeople}
             homeId={homePersonId}
             onMakeHome={readOnly ? undefined : onMakeHome}
@@ -664,8 +675,20 @@ export function FamilyTreeCanvas({
         </div>
       )}
 
+      {notesFor && people[notesFor] && (
+        <NotesDialog
+          person={people[notesFor]}
+          readOnly={readOnly || !onAddNote}
+          onAdd={onAddNote ? (text) => onAddNote(notesFor, text) : undefined}
+          onUpdate={onUpdateNote ? (noteId, text) => onUpdateNote(notesFor, noteId, text) : undefined}
+          onRemove={onRemoveNote ? (noteId) => onRemoveNote(notesFor, noteId) : undefined}
+          onClose={() => setNotesFor(null)}
+        />
+      )}
+
       {panelOpen && selected && (
         <PersonPanel
+          onOpenNotes={() => setNotesFor(selected.id)}
           people={people}
           person={selected}
           homePersonId={homePersonId}

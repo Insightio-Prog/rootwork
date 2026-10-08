@@ -223,6 +223,9 @@ export default function App() {
                 }}
                 onRemoveSibling={store.removeSibling}
                 onMakeHome={store.makeHome}
+                onAddNote={store.addPersonNote}
+                onUpdateNote={store.updatePersonNote}
+                onRemoveNote={store.removePersonNote}
                 onEdit={ui.openEditPerson}
                 onDelete={setDeleteId}
                 onAddResidence={store.addResidence}

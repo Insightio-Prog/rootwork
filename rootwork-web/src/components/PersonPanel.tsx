@@ -24,6 +24,7 @@ type PersonPanelProps = {
   onSelect: (id: string) => void;
   onClose: () => void;
   onMakeHome: () => void;
+  onOpenNotes?: () => void;
   onAddParent: () => void;
   onRemoveParent: (parentId: string) => void;
   onAddSpouse: () => void;
@@ -61,6 +62,7 @@ export function PersonPanel({
   onSelect,
   onClose,
   onMakeHome,
+  onOpenNotes,
   onAddParent,
   onRemoveParent,
   onAddSpouse,
@@ -314,6 +316,14 @@ export function PersonPanel({
           onRemove={onRemoveSibling}
           readOnly={readOnly}
         />
+
+        {onOpenNotes && (readOnly ? (person.stickyNotes ?? []).length > 0 : true) && (
+          <div className="panel-actions">
+            <button type="button" className="btn btn-secondary" onClick={onOpenNotes}>
+              {(person.stickyNotes ?? []).length > 0 ? `Notes (${(person.stickyNotes ?? []).length})` : "Add note"}
+            </button>
+          </div>
+        )}
 
         {!readOnly && (
         <div className="panel-actions">

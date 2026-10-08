@@ -9,6 +9,7 @@ type PersonContextMenuProps = {
   canAddParent: boolean;
   onLifeStory?: () => void;
   onMakeHome?: () => void;
+  onAddNote?: () => void;
   collapseLabel?: string;
   onToggleCollapse?: () => void;
   onAdd?: (kind: RelativeKind) => void;
@@ -21,6 +22,7 @@ export function PersonContextMenu({
   canAddParent,
   onLifeStory,
   onMakeHome,
+  onAddNote,
   collapseLabel,
   onToggleCollapse,
   onAdd,
@@ -78,6 +80,18 @@ export function PersonContextMenu({
           }}
         >
           Life story
+        </button>
+      )}
+      {onAddNote && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onAddNote();
+            onClose();
+          }}
+        >
+          Add note
         </button>
       )}
       {onMakeHome && (

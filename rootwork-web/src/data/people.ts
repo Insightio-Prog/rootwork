@@ -74,6 +74,15 @@ export type Person = {
   altNames: string[];
   sources: SourceLink[];
   nationality: string;
+  /** Free-form notes the family adds in Rootwork (separate from the imported `notes` text). */
+  stickyNotes: PersonNote[];
+};
+
+export type PersonNote = {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type PersonDraft = {
@@ -129,6 +138,7 @@ export function createPerson(draft: PersonDraft): Person {
     altNames: [],
     sources: [],
     nationality: (draft.nationality ?? "").trim(),
+    stickyNotes: [],
   };
 }
 
@@ -873,7 +883,33 @@ export function normalizePerson(
       : [],
     sources: normalizeSources(person.sources),
     nationality: typeof person.nationality === "string" ? person.nationality.trim() : "",
+    stickyNotes: normalizeStickyNotes(person.stickyNotes),
   };
+}
+
+function normalizeStickyNotes(value: unknown): PersonNote[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Partial<PersonNote>;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (!text) return [];
+    const createdAt = typeof row.createdAt === "string" ? row.createdAt : "";
+    return [
+      {
+        id: typeof row.id === "string" && row.id ? row.id : crypto.randomUUID(),
+        text,
+        createdAt,
+        updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : createdAt,
+      },
+    ];
+  });
+}
+
+/** The first few words of a note, for the little tab on a tree card. */
+export function noteSnippet(text: string, max = 34): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}\u2026` : flat;
 }
 
 function normalizeSources(value: unknown): SourceLink[] {

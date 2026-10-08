@@ -53,6 +53,7 @@ type FanChartProps = {
   people: Record<string, Person>;
   homeId: string;
   onMakeHome?: (id: string) => void;
+  onOpenNotes?: (id: string) => void;
   selectedId: string | null;
   panelOpen: boolean;
   maxGenerations: number;
@@ -94,6 +95,7 @@ export function FanChart({
   people,
   homeId,
   onMakeHome,
+  onOpenNotes,
   selectedId,
   panelOpen,
   maxGenerations,
@@ -581,6 +583,15 @@ export function FanChart({
           x={menu.x}
           y={menu.y}
           canAddParent={people[menu.personId].parentIds.length < 2}
+          onAddNote={
+            onOpenNotes
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onOpenNotes(personId);
+                }
+              : undefined
+          }
           onMakeHome={
             onMakeHome && menu.personId !== homeId
               ? () => {

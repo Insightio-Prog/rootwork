@@ -4,6 +4,7 @@ import { orderedParents, type Person } from "../data/people";
 import { hasLifeStory, useLifeStories } from "../stories";
 import { IconMinus, IconPlus } from "../icons";
 import { FocusContextMenu } from "./FocusContextMenu";
+import { NoteTab } from "./NoteTab";
 import { PersonCard } from "./PersonCard";
 
 const MIN_ZOOM = 0.25;
@@ -30,6 +31,7 @@ type FocusTreeProps = {
   people: Record<string, Person>;
   homeId: string;
   onMakeHome?: (id: string) => void;
+  onOpenNotes?: (id: string) => void;
   selectedId: string | null;
   locateId?: string | null;
   locateKey?: number;
@@ -52,6 +54,7 @@ export function FocusTree({
   people,
   homeId,
   onMakeHome,
+  onOpenNotes,
   selectedId,
   locateId = null,
   locateKey = 0,
@@ -320,6 +323,7 @@ export function FocusTree({
                     setMenu({ personId: id, x: event.clientX, y: event.clientY });
                   }}
                 />
+                <NoteTab person={person} onOpen={onOpenNotes} />
               </div>
             );
           })}
@@ -354,6 +358,15 @@ export function FocusTree({
           y={menu.y}
           onViewProfile={() => onViewProfile(menu.personId)}
           onCollapse={() => collapseToPerson(menu.personId)}
+          onAddNote={
+            onOpenNotes
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onOpenNotes(personId);
+                }
+              : undefined
+          }
           onMakeHome={
             onMakeHome && menu.personId !== homeId
               ? () => {

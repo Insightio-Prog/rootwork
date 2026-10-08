@@ -22,6 +22,7 @@ import { setLayoutCheck } from "../dev/layoutCheck";
 import { type Person } from "../data/people";
 import { IconMinus, IconPlus } from "../icons";
 import { hasLifeStory, useLifeStories } from "../stories";
+import { NoteTab } from "./NoteTab";
 import { PersonCard } from "./PersonCard";
 import { PersonContextMenu, type RelativeKind } from "./PersonContextMenu";
 
@@ -43,6 +44,7 @@ type AncestorTreeProps = {
   people: Record<string, Person>;
   homeId: string;
   onMakeHome?: (id: string) => void;
+  onOpenNotes?: (id: string) => void;
   selectedId: string | null;
   locateId?: string | null;
   locateKey?: number;
@@ -139,6 +141,7 @@ export function AncestorTree({
   people,
   homeId,
   onMakeHome,
+  onOpenNotes,
   selectedId,
   locateId = null,
   locateKey = 0,
@@ -850,6 +853,7 @@ export function AncestorTree({
                     setMenu({ personId: id, x: event.clientX, y: event.clientY });
                   }}
                 />
+                <NoteTab person={person} onOpen={onOpenNotes} />
               </div>
             );
           })}
@@ -883,6 +887,15 @@ export function AncestorTree({
           x={menu.x}
           y={menu.y}
           canAddParent={people[menu.personId].parentIds.length < 2}
+          onAddNote={
+            onOpenNotes
+              ? () => {
+                  const personId = menu.personId;
+                  setMenu(null);
+                  onOpenNotes(personId);
+                }
+              : undefined
+          }
           onMakeHome={
             onMakeHome && !readOnly && menu.personId !== homeId
               ? () => {
