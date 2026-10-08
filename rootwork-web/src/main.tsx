@@ -4,11 +4,10 @@ import App from "./App";
 import { LayoutLab } from "./dev/LayoutLabOverlay";
 import { initStories } from "./stories";
 import { ShareGate } from "./share/ShareGate";
-import { applyFullLayout, shareInfo } from "./share/info";
+import { shareInfo } from "./share/info";
 import "./styles/organic.css";
 import "./styles/app.css";
 
-applyFullLayout();
 const share = shareInfo();
 if (!share) void initStories();
 

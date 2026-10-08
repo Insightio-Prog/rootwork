@@ -3,8 +3,7 @@ import type { DuplicateMergeReport, GedcomImportReport } from "../import/mergeGe
 import { downloadBlob, makeBackupBlob, makeViewerHtml, readGedcomFile, restoreBackup } from "../backup/web";
 import { clearMediaUrlCache } from "../media/store";
 import { invokeErrorMessage, saveApiKey, storedPassword } from "../review/claude";
-import { usePhone } from "../state/usePhone";
-import { fullLayoutOn, isSharedCopy, setFullLayout } from "../share/info";
+import { isSharedCopy } from "../share/info";
 import { publishShare, shareStatus, shareUrl, stopShare, type ShareStatus } from "../export/share";
 
 type ExportPageProps = {
@@ -43,7 +42,6 @@ export function ExportPage({
   onImportGedcom,
   onCollapseDuplicates,
 }: ExportPageProps) {
-  const phone = usePhone();
   const [busy, setBusy] = useState<"export" | "html" | "import" | "gedcom" | "merge" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -369,29 +367,6 @@ export function ExportPage({
             </button>
           </div>
         </div>
-        {phone || fullLayoutOn() ? (
-          <div className="card elev-md placeholder-card">
-            <div className="placeholder-kicker">Layout</div>
-            <h3>{fullLayoutOn() ? "Full version is on" : "Use the full version"}</h3>
-            <p>
-              {fullLayoutOn()
-                ? "You're seeing the desktop layout. Switch back for the simpler phone view."
-                : "Switch this phone to the desktop layout so you can add and edit people. Everything looks smaller, so pinch to zoom."}
-            </p>
-            <div className="export-actions">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setFullLayout(!fullLayoutOn());
-                  window.location.reload();
-                }}
-              >
-                {fullLayoutOn() ? "Back to phone layout" : "Use full version"}
-              </button>
-            </div>
-          </div>
-        ) : null}
         {message ? <p className="export-status">{message}</p> : null}
         {error ? <p className="export-error">{error}</p> : null}
       </div>
