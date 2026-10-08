@@ -124,6 +124,23 @@ export function peopleForFamilyLine(
     onLine.add(father.id);
     addWithSpouses(father);
     queue.push(father.id);
+    // The father may spell the name differently (McGinnis). His wife is included above; also bring in
+    // his children and their descendants who carry his spelling, with their spouses.
+    const fatherKey = normalizeFamilyName(father.familyName);
+    if (!fatherKey || keys.has(fatherKey)) continue;
+    const kin = [father.id];
+    const seenKin = new Set(kin);
+    while (kin.length > 0) {
+      const parent = people[kin.pop() as string];
+      if (!parent) continue;
+      for (const candidate of Object.values(people)) {
+        if (seenKin.has(candidate.id) || !candidate.parentIds.includes(parent.id)) continue;
+        if (normalizeFamilyName(candidate.familyName) !== fatherKey) continue;
+        seenKin.add(candidate.id);
+        addWithSpouses(candidate);
+        kin.push(candidate.id);
+      }
+    }
   }
   const next: Record<string, Person> = {};
   for (const id of ids) {
