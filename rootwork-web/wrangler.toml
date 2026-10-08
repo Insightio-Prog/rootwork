@@ -1,3 +1,8 @@
 name = "rootwork"
 compatibility_date = "2025-01-01"
 pages_build_output_dir = "dist"
+
+# Where the shared family link is stored (the ID is not a secret).
+[[kv_namespaces]]
+binding = "SHARE"
+id = "5bade105101546e896b9cdae774136ab"
