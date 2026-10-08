@@ -46,7 +46,7 @@ export default function App() {
   useLifeStories();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [storyLab, setStoryLab] = useState<{ personId?: string } | null>(null);
+  const [storyLab, setStoryLab] = useState<{ personId?: string; newFamily?: boolean } | null>(null);
   const [askOpen, setAskOpen] = useState(false);
   const [askByTree, setAskByTree] = useState<Record<string, ChatTurn[]>>({});
   const { people, homePersonId, treeTitle, todos = EMPTY_TODOS } = store.tree;
@@ -166,6 +166,7 @@ export default function App() {
             people={people}
             homePersonId={homePersonId}
             onOpenInFamily={ui.locatePerson}
+            onMakeHome={store.makeHome}
           />
         ) : ui.nav === "tree" && phone ? (
           <PhoneTree
@@ -176,6 +177,7 @@ export default function App() {
             locateKey={ui.locateKey}
             onOpenLifeStory={ui.openLifeStory}
             onGoToBackup={() => ui.setNav("export")}
+            onMakeHome={store.makeHome}
           />
         ) : ui.nav === "tree" ? (
           <>
@@ -280,6 +282,7 @@ export default function App() {
             onPick={ui.setStoryPersonId}
             onChangePerson={() => ui.setStoryPersonId(null)}
             onCreateStory={phone ? undefined : () => setStoryLab({})}
+            onCreateFamilyStory={phone ? undefined : () => setStoryLab({ newFamily: true })}
             onEditStory={phone ? undefined : (id) => setStoryLab({ personId: id })}
           />
         ) : ui.nav === "home" ? (
@@ -419,6 +422,7 @@ export default function App() {
         open={storyLab !== null}
         people={people}
         personId={storyLab?.personId}
+        newFamily={storyLab?.newFamily}
         onClose={() => setStoryLab(null)}
       />
     </div>

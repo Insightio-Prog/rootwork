@@ -1,11 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { readHtmlExportPayload } from "../export/htmlExport";
+import { setExportFlags } from "../data/countries";
 import { ViewerApp } from "./ViewerApp";
 import "../styles/organic.css";
 import "../styles/app.css";
 
 const payload = readHtmlExportPayload();
+if (payload?.flags) setExportFlags(payload.flags);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

@@ -5,6 +5,7 @@ import type { LifeStory } from "./index";
 function storedStory(story: LifeStory): LifeStory {
   return {
     personId: story.personId,
+    ...(story.kind ? { kind: story.kind } : {}),
     slug: story.slug,
     title: story.title,
     blocks: story.blocks.map((block) =>
@@ -131,6 +132,22 @@ export async function saveStory(story: LifeStory) {
   await persist(next);
   setStories(next);
   return next[story.personId];
+}
+
+export async function deleteStory(key: string) {
+  await initStories();
+  if (!stories[key]) return;
+  const next = { ...stories };
+  delete next[key];
+  await persist(next);
+  setStories(next);
+}
+
+/** Stories that are about a family line or topic, not one person. */
+export function familyStories(all: Record<string, LifeStory>): LifeStory[] {
+  return Object.values(all)
+    .filter((story) => story.kind === "family")
+    .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 }
 
 export function hasLifeStory(personId: string): boolean {

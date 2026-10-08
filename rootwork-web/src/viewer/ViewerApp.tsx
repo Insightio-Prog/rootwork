@@ -28,6 +28,13 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [storyPersonId, setStoryPersonId] = useState<string | null>(null);
   const phone = usePhone();
+  const [homeOverride, setHomeOverride] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("rootwork.viewer.home") ?? "{}") as Record<string, string>;
+    } catch {
+      return {};
+    }
+  });
   const [locate, setLocate] = useState<{ id: string; n: number } | null>(null);
 
   const entry = useMemo(
@@ -51,7 +58,18 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
   }
 
   const tree = parseTree(JSON.stringify(entry.tree));
-  const { people, homePersonId, treeTitle } = tree;
+  const { people, treeTitle } = tree;
+  const chosenHome = homeOverride[entry.id];
+  const homePersonId = chosenHome && people[chosenHome] ? chosenHome : tree.homePersonId;
+  function makeHome(id: string) {
+    const next = { ...homeOverride, [entry.id]: id };
+    setHomeOverride(next);
+    try {
+      localStorage.setItem("rootwork.viewer.home", JSON.stringify(next));
+    } catch {
+      /* private window: it just won't be remembered */
+    }
+  }
   const personCount = Object.keys(people).length;
   const selected =
     selectedId && people[selectedId] ? selectedId : selectedId === null ? null : homePersonId;
@@ -165,6 +183,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             key={entry.id}
             people={people}
             homePersonId={homePersonId}
+            onMakeHome={makeHome}
             onOpenInFamily={(id) => {
               setLocate((current) => ({ id, n: (current?.n ?? 0) + 1 }));
               setNav("tree");
@@ -175,6 +194,7 @@ export function ViewerApp({ payload }: { payload: HtmlExportPayload }) {
             key={entry.id}
             people={people}
             homePersonId={homePersonId}
+            onMakeHome={makeHome}
             locateId={locate?.id}
             locateKey={locate?.n}
             onOpenLifeStory={(id) => {

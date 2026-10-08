@@ -36,6 +36,8 @@ export type HtmlExportTree = {
 
 export type HtmlExportPayload = {
   exportedAt: string;
+  /** Flag pictures by country code, as data addresses. */
+  flags?: Record<string, string>;
   trees: HtmlExportTree[];
 };
 

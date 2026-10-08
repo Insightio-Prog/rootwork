@@ -168,7 +168,15 @@ export function countryNameFor(code: string | null): string {
   return COUNTRIES.find((country) => country.code === code)?.name ?? "";
 }
 
+let exportFlags: Record<string, string> = {};
+
+/** A shared HTML file carries its own flag pictures, so they show offline and from any app. */
+export function setExportFlags(flags: Record<string, string>) {
+  exportFlags = flags;
+}
+
 export function flagUrl(code: string): string {
+  if (exportFlags[code]) return exportFlags[code];
   // A saved .html file has no /flags folder next to it, so it borrows the flags from the live site.
   const base = typeof location !== "undefined" && location.protocol === "file:" ? "https://rootwork.insightio.co.uk" : "";
   return `${base}/flags/${code}.svg`;

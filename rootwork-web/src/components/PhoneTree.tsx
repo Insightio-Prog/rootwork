@@ -24,6 +24,8 @@ type PhoneTreeProps = {
   locateKey?: number;
   onOpenLifeStory: (id: string) => void;
   onGoToBackup: () => void;
+  /** Make someone the home person; the Family and Fan views start from them. */
+  onMakeHome?: (id: string) => void;
 };
 
 const noop = () => undefined;
@@ -88,7 +90,7 @@ function Section({
 }
 
 /** The phone's family tree: one person at a time, with their parents, partners, siblings and children one tap away. */
-export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLifeStory, onGoToBackup }: PhoneTreeProps) {
+export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLifeStory, onGoToBackup, onMakeHome }: PhoneTreeProps) {
   const start = homePersonId && people[homePersonId] ? homePersonId : (Object.keys(people)[0] ?? null);
   const [focusId, setFocusId] = useState<string | null>(start);
   const [trail, setTrail] = useState<string[]>([]);
@@ -175,6 +177,11 @@ export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLif
           {notes.length > 0 && (
             <button type="button" className="btn btn-secondary" onClick={() => setNotesFor(focus.id)}>
               Notes ({notes.length})
+            </button>
+          )}
+          {onMakeHome && !isHome && (
+            <button type="button" className="btn btn-secondary" onClick={() => onMakeHome(focus.id)}>
+              Make home person
             </button>
           )}
         </div>

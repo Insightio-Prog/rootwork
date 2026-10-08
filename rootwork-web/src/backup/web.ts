@@ -1,4 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from "fflate";
+import { flagCodeFor, flagCodeFromPlace } from "../data/countries";
 import { idbGet, idbPut } from "../media/idb";
 import { getWorkspaceIndex, storiesStorageKey, treeStorageKey } from "../state/workspaces";
 
@@ -153,6 +154,31 @@ async function packMedia(blob: Blob, mime: string): Promise<{ mime: string; data
   return { mime: outMime, data: btoa(binary) };
 }
 
+async function packFlags(trees: unknown[]): Promise<Record<string, string>> {
+  const codes = new Set<string>();
+  for (const tree of trees) {
+    const people = (tree as { people?: Record<string, { nationality?: string; birthPlace?: string }> }).people ?? {};
+    for (const person of Object.values(people)) {
+      const code = flagCodeFor(person.nationality) ?? flagCodeFromPlace(person.birthPlace);
+      if (code) codes.add(code);
+    }
+  }
+  const flags: Record<string, string> = {};
+  for (const code of codes) {
+    try {
+      const response = await fetch(`/flags/${code}.svg`);
+      if (!response.ok) continue;
+      const bytes = new TextEncoder().encode(await response.text());
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      flags[code] = `data:image/svg+xml;base64,${btoa(binary)}`;
+    } catch {
+      // a missing flag just stays blank
+    }
+  }
+  return flags;
+}
+
 export async function makeViewerHtml(charts: Record<string, unknown>): Promise<Blob> {
   const response = await fetch("/viewer.template.html");
   if (!response.ok) throw new Error("The view-only template is missing from this site.");
@@ -180,7 +206,8 @@ export async function makeViewerHtml(charts: Record<string, unknown>): Promise<B
       media,
     });
   }
-  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), trees }).replace(/</g, "\\u003c");
+  const flags = await packFlags(trees.map((item) => item.tree));
+  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), flags, trees }).replace(/</g, "\\u003c");
   const block = `<script type="application/json" id="rootwork-export">${payload}</script>`;
   const html = template.includes("<!--ROOTWORK_EXPORT-->")
     ? template.replace("<!--ROOTWORK_EXPORT-->", () => block)

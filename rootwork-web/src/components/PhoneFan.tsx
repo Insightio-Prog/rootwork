@@ -7,12 +7,13 @@ type PhoneFanProps = {
   people: Record<string, Person>;
   homePersonId: string | null;
   onOpenInFamily: (id: string) => void;
+  onMakeHome?: (id: string) => void;
 };
 
 const noop = () => undefined;
 
 /** The whole family at a glance. Tap a wedge for a small card; the card opens that person in Family. */
-export function PhoneFan({ people, homePersonId, onOpenInFamily }: PhoneFanProps) {
+export function PhoneFan({ people, homePersonId, onOpenInFamily, onMakeHome }: PhoneFanProps) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [rootRequest, setRootRequest] = useState<{ id: string; n: number } | null>(null);
   const homeId = homePersonId && people[homePersonId] ? homePersonId : (Object.keys(people)[0] ?? null);
@@ -69,6 +70,19 @@ export function PhoneFan({ people, homePersonId, onOpenInFamily }: PhoneFanProps
             >
               Centre fan here
             </button>
+            {onMakeHome && picked.id !== homeId && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  onMakeHome(picked.id);
+                  setPickedId(null);
+                  setRootRequest(null);
+                }}
+              >
+                Make home person
+              </button>
+            )}
           </div>
           <button type="button" className="phone-fan-close" aria-label="Close" onClick={() => setPickedId(null)}>
             ×

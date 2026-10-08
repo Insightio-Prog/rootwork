@@ -16,7 +16,10 @@ export type StoryImageBlock = {
 export type StoryBlock = StoryMdBlock | StoryImageBlock;
 
 export type LifeStory = {
+  /** The person this story is about, or a generated key for a family story. */
   personId: string;
+  /** "family" stories are about a line or topic rather than one person. */
+  kind?: "family";
   slug: string;
   title: string;
   blocks: StoryBlock[];
@@ -36,6 +39,7 @@ export function storySlug(givenName: string, familyName: string): string {
 export function storyToStored(story: LifeStory): LifeStory {
   return {
     personId: story.personId,
+    ...(story.kind ? { kind: story.kind } : {}),
     slug: story.slug,
     title: story.title,
     blocks: story.blocks.map((block) =>
@@ -51,6 +55,10 @@ export function storyToStored(story: LifeStory): LifeStory {
   };
 }
 
+export function newFamilyStoryKey(): string {
+  return `family-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function storyToExport(story: LifeStory) {
   return storyToStored(story);
 }
@@ -63,6 +71,8 @@ export {
   reloadStories,
   remapStoryPerson,
   saveStory,
+  deleteStory,
+  familyStories,
   storyFor,
   useLifeStories,
 } from "./store";

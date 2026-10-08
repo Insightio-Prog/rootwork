@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { displayName, type Person } from "../data/people";
 import { IconSearch } from "../icons";
 import { useMediaUrl } from "../media/useMediaUrl";
-import { storyFor, useLifeStories, type LifeStory, type StoryImageBlock } from "../stories";
+import { familyStories, storyFor, useLifeStories, type LifeStory, type StoryImageBlock } from "../stories";
 import { MarkdownText } from "../stories/render";
 import { MediaViewer } from "./MediaThumb";
 import { PersonAvatar } from "./PersonAvatar";
@@ -13,6 +13,7 @@ type LifeStoryPageProps = {
   onPick: (id: string) => void;
   onChangePerson: () => void;
   onCreateStory?: () => void;
+  onCreateFamilyStory?: () => void;
   onEditStory?: (id: string) => void;
 };
 
@@ -36,7 +37,7 @@ export function LifeStoryArticle({
       <header className="life-story-header">
         {person?.photo ? <PersonAvatar person={person} className="life-story-portrait" /> : null}
         <div>
-          <p className="life-story-kicker">Life story</p>
+          <p className="life-story-kicker">{story.kind === "family" ? "Family story" : "Life story"}</p>
           <h1>{story.title || "Untitled"}</h1>
         </div>
       </header>
@@ -104,6 +105,7 @@ export function LifeStoryPage({
   onPick,
   onChangePerson,
   onCreateStory,
+  onCreateFamilyStory,
   onEditStory,
 }: LifeStoryPageProps) {
   const stories = useLifeStories();
@@ -116,19 +118,24 @@ export function LifeStoryPage({
       .sort((a, b) => displayName(a).localeCompare(displayName(b)));
   }, [people, query, stories]);
 
+  const familyList = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return familyStories(stories).filter((item) => !needle || (item.title || "").toLowerCase().includes(needle));
+  }, [query, stories]);
+
   const story = personId ? storyFor(personId) : undefined;
   const person = personId ? people[personId] : undefined;
 
-  if (story && person) {
+  if (story && (person || story.kind === "family")) {
     return (
       <section className="life-story-page">
         <div className="life-story-toolbar">
           <button type="button" className="btn btn-secondary" onClick={onChangePerson}>
-            Choose another person
+            {story.kind === "family" ? "All stories" : "Choose another person"}
           </button>
           {onEditStory ? (
-            <button type="button" className="btn btn-primary" onClick={() => onEditStory(person.id)}>
-              Edit life story
+            <button type="button" className="btn btn-primary" onClick={() => onEditStory(story.personId)}>
+              {story.kind === "family" ? "Edit story" : "Edit life story"}
             </button>
           ) : null}
         </div>
@@ -139,7 +146,7 @@ export function LifeStoryPage({
     );
   }
 
-  if (candidates.length === 0 && !query.trim()) {
+  if (candidates.length === 0 && familyStories(stories).length === 0 && !query.trim()) {
     return (
       <section className="life-story-page">
         <div className="life-story-empty">
@@ -151,6 +158,11 @@ export function LifeStoryPage({
               Create life story
             </button>
           ) : null}
+          {onCreateFamilyStory ? (
+            <button type="button" className="btn btn-secondary" onClick={onCreateFamilyStory}>
+              Create family story
+            </button>
+          ) : null}
         </div>
       </section>
     );
@@ -158,11 +170,18 @@ export function LifeStoryPage({
 
   return (
     <section className="life-story-page is-picker">
-      {onCreateStory ? (
+      {onCreateStory || onCreateFamilyStory ? (
         <div className="life-story-picker-bar">
-          <button type="button" className="btn btn-primary" onClick={onCreateStory}>
-            Create life story
-          </button>
+          {onCreateStory ? (
+            <button type="button" className="btn btn-primary" onClick={onCreateStory}>
+              Create life story
+            </button>
+          ) : null}
+          {onCreateFamilyStory ? (
+            <button type="button" className="btn btn-secondary" onClick={onCreateFamilyStory}>
+              Create family story
+            </button>
+          ) : null}
         </div>
       ) : null}
       <div className="media-search">
@@ -176,9 +195,27 @@ export function LifeStoryPage({
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
-      {candidates.length === 0 ? (
+      {familyList.length > 0 && (
+        <>
+          <h3 className="story-section-title">Family stories</h3>
+          <div className="media-folders">
+            {familyList.map((item) => (
+              <button key={item.personId} type="button" className="media-folder" onClick={() => onPick(item.personId)}>
+                <span className="person-mono is-folder is-family" aria-hidden="true">
+                  ❦
+                </span>
+                <span className="media-folder-copy">
+                  <span className="media-folder-name">{item.title || "Untitled"}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {candidates.length > 0 && <h3 className="story-section-title">Life stories</h3>}
+      {candidates.length === 0 && familyList.length === 0 ? (
         <div className="media-empty">No matching stories.</div>
-      ) : (
+      ) : candidates.length === 0 ? null : (
         <div className="media-folders">
           {candidates.map((item) => (
             <button

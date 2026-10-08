@@ -4,7 +4,7 @@ import { LifeStoryArticle } from "../components/LifeStoryPage";
 import { parseYear, type MediaRef } from "../data/people";
 import { importMedia } from "../media/store";
 import { invokeErrorMessage } from "../review/claude";
-import { saveStory, storyFor, storySlug, storyToExport, useLifeStories, type LifeStory, type StoryBlock } from "../stories";
+import { deleteStory, familyStories, newFamilyStoryKey, saveStory, storyFor, storySlug, storyToExport, useLifeStories, type LifeStory, type StoryBlock } from "../stories";
 import { MarkdownText, splitMarkdownBlocks } from "../stories/render";
 import "./story-lab.css";
 
@@ -20,8 +20,12 @@ type StoryLabProps = {
   open: boolean;
   people: Record<string, StoryLabPerson> | StoryLabPerson[];
   personId?: string;
+  /** Open on a blank family story. */
+  newFamily?: boolean;
   onClose: () => void;
 };
+
+const NEW_FAMILY = "__new_family__";
 
 function personName(person: StoryLabPerson) {
   return [person.givenName, person.familyName].filter(Boolean).join(" ") || "Unnamed";
@@ -45,7 +49,7 @@ function emptyStory(person: StoryLabPerson | undefined): LifeStory {
   };
 }
 
-export function StoryLab({ open, people, personId: requestedId, onClose }: StoryLabProps) {
+export function StoryLab({ open, people, personId: requestedId, newFamily = false, onClose }: StoryLabProps) {
   const stories = useLifeStories();
   const [personId, setPersonId] = useState("");
   const [markdown, setMarkdown] = useState("");
@@ -57,6 +61,8 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [familyTitle, setFamilyTitle] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const sortedPeople = useMemo(() => {
     const list = Array.isArray(people) ? people : Object.values(people);
@@ -73,22 +79,28 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
       setPersonId(requestedId);
       return;
     }
+    if (newFamily) {
+      setPersonId(NEW_FAMILY);
+      return;
+    }
     setPersonId((current) => {
       if (current && sortedPeople.some((item) => item.id === current)) return current;
       return sortedPeople[0]?.id || "";
     });
-  }, [open, requestedId, sortedPeople]);
+  }, [open, requestedId, newFamily, sortedPeople]);
 
   useEffect(() => {
     if (!open) return;
     const existing = personId ? storyFor(personId) : undefined;
     setBlocks(existing?.blocks ?? []);
+    setFamilyTitle(existing?.kind === "family" ? existing.title : "");
+    setConfirmDelete(false);
     setMarkdown("");
     setPendingFiles({});
   }, [personId, open]);
 
   useEffect(() => {
-    if (!personId || blocks.length > 0) return;
+    if (!personId || personId === NEW_FAMILY || blocks.length > 0) return;
     const existing = stories[personId];
     if (existing?.blocks.length) setBlocks(existing.blocks);
   }, [stories, personId, blocks.length]);
@@ -100,10 +112,22 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
   }, [previews]);
 
   const person = sortedPeople.find((item) => item.id === personId);
-  const story = useMemo(() => {
+  const isFamily = personId === NEW_FAMILY || stories[personId]?.kind === "family";
+  const story = useMemo((): LifeStory => {
+    if (isFamily) {
+      return {
+        personId: personId === NEW_FAMILY ? "" : personId,
+        kind: "family",
+        slug: storySlug(familyTitle, ""),
+        title: familyTitle.trim(),
+        blocks,
+      };
+    }
     const base = emptyStory(person);
     return { ...base, blocks };
-  }, [person, blocks]);
+  }, [person, blocks, isFamily, personId, familyTitle]);
+  const familyList = familyStories(stories);
+  const canSave = isFamily ? Boolean(familyTitle.trim()) : Boolean(story.personId);
 
   function importMarkdown() {
     setBlocks(splitMarkdownBlocks(markdown));
@@ -143,7 +167,7 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
   }
 
   async function handleSave() {
-    if (!story.personId || saving) return;
+    if (!canSave || saving) return;
     setSaving(true);
     setSaveError("");
     try {
@@ -162,7 +186,9 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
           ...(media ? { media } : {}),
         });
       }
-      const savedStory = await saveStory({ ...story, blocks: nextBlocks });
+      const key = isFamily && !story.personId ? newFamilyStoryKey() : story.personId;
+      const savedStory = await saveStory({ ...story, personId: key, blocks: nextBlocks });
+      if (isFamily && personId === NEW_FAMILY) setPersonId(key);
       setBlocks(savedStory.blocks);
       setPendingFiles({});
       setSaved(true);
@@ -179,7 +205,7 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
   return createPortal(
     <div className="story-lab" role="dialog" aria-label="Life story editor">
       <aside className="story-lab-editor">
-        <div className="story-lab-kicker">Life story</div>
+        <div className="story-lab-kicker">{isFamily ? "Family story" : "Life story"}</div>
         <div className="story-lab-title-row">
           <h2 className="story-lab-title">Editor</h2>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -194,12 +220,34 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
           onChange={(event) => setPersonId(event.target.value)}
         >
           {sortedPeople.length === 0 ? <option value="">No people in the tree</option> : null}
-          {sortedPeople.map((item) => (
-            <option key={item.id} value={item.id}>
-              {personLabel(item)}
-            </option>
-          ))}
+          <optgroup label="Family stories">
+            <option value={NEW_FAMILY}>New family story…</option>
+            {familyList.map((item) => (
+              <option key={item.personId} value={item.personId}>
+                {item.title || "Untitled"}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Life stories (a person)">
+            {sortedPeople.map((item) => (
+              <option key={item.id} value={item.id}>
+                {personLabel(item)}
+              </option>
+            ))}
+          </optgroup>
         </select>
+        {isFamily && (
+          <>
+            <label htmlFor="story-lab-title">Story title</label>
+            <input
+              id="story-lab-title"
+              className="input"
+              value={familyTitle}
+              onChange={(event) => setFamilyTitle(event.target.value)}
+              placeholder="The Keel line"
+            />
+          </>
+        )}
         <label htmlFor="story-lab-md">Claude markdown</label>
         <textarea
           id="story-lab-md"
@@ -212,12 +260,36 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
           <button type="button" className="btn btn-secondary" onClick={importMarkdown} disabled={!markdown.trim()}>
             Import markdown
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => void handleSave()} disabled={!story.personId || saving}>
+          <button type="button" className="btn btn-primary" onClick={() => void handleSave()} disabled={!canSave || saving}>
             {saved ? "Saved" : saving ? "Saving" : "Save story"}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => void copyJson()} disabled={!story.personId}>
+          <button type="button" className="btn btn-secondary" onClick={() => void copyJson()} disabled={!canSave}>
             {copied ? "Copied" : "Copy JSON"}
           </button>
+          {isFamily && personId !== NEW_FAMILY &&
+            (confirmDelete ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const key = personId;
+                    setConfirmDelete(false);
+                    setPersonId(NEW_FAMILY);
+                    void deleteStory(key);
+                  }}
+                >
+                  Yes, delete
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(false)}>
+                  Keep
+                </button>
+              </>
+            ) : (
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(true)}>
+                Delete story
+              </button>
+            ))}
         </div>
         {saveError ? <p className="story-lab-error">{saveError}</p> : null}
         <div className="story-lab-blocks">
@@ -282,7 +354,7 @@ export function StoryLab({ open, people, personId: requestedId, onClose }: Story
           <span>Live preview</span>
         </div>
         <div className="story-lab-preview-scroll">
-          <LifeStoryArticle story={story} person={person} previews={previews} highlightIndex={hoverIndex} />
+          <LifeStoryArticle story={story} person={isFamily ? undefined : person} previews={previews} highlightIndex={hoverIndex} />
         </div>
       </section>
     </div>,
