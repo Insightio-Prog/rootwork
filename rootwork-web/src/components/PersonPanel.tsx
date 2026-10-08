@@ -1,4 +1,5 @@
 import { useRef, type ChangeEvent } from "react";
+import { countryNameFor, flagCodeFromPlace } from "../data/countries";
 import {
   childrenOf,
   displayName,
@@ -155,7 +156,7 @@ export function PersonPanel({
             }}
             aria-label={person.flag ? "Change flag" : "Add flag"}
           >
-            <PersonFlag flag={person.flag ?? null} nationality={person.nationality} className="panel-flag-frame" />
+            <PersonFlag flag={person.flag ?? null} nationality={person.nationality} birthPlace={person.birthPlace} className="panel-flag-frame" />
             {!readOnly && (
             <input
               ref={flagInputRef}
@@ -189,7 +190,16 @@ export function PersonPanel({
           <div className="vital-row">
             <span className="vital-icon is-nationality">⚑</span>
             <div>
-              <div className="vital-date">{person.nationality || "Nationality unknown"}</div>
+              {person.nationality ? (
+                <div className="vital-date">{person.nationality}</div>
+              ) : flagCodeFromPlace(person.birthPlace) ? (
+                <>
+                  <div className="vital-date">{countryNameFor(flagCodeFromPlace(person.birthPlace))}</div>
+                  <div className="vital-place">From birthplace</div>
+                </>
+              ) : (
+                <div className="vital-date">Nationality unknown</div>
+              )}
               {!person.nationality && !readOnly ? (
                 <button type="button" className="vital-link" onClick={() => onEdit(person.id)}>
                   Add nationality

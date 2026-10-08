@@ -109,6 +109,65 @@ export function flagCodeFor(nationality: string | undefined | null): string | nu
   return null;
 }
 
+// Places that name no country on their own. Anything not listed here can be given a nationality by hand.
+const PLACE_HINTS: Record<string, string[]> = {
+  "gb-wls": [
+    "glamorgan", "glamorganshire", "monmouthshire", "pembrokeshire", "carmarthenshire", "cardiganshire", "ceredigion",
+    "breconshire", "brecknockshire", "radnorshire", "montgomeryshire", "merionethshire", "denbighshire", "flintshire",
+    "caernarfonshire", "caernarvonshire", "anglesey", "cardiff", "swansea", "newport", "rhondda", "pontypridd", "merthyr tydfil",
+    "wrexham", "rhyl", "bangor", "gwynedd", "powys", "clwyd", "dyfed",
+  ],
+  "gb-sct": [
+    "aberdeenshire", "ayrshire", "lanarkshire", "fife", "perthshire", "argyll", "midlothian", "lothian", "edinburgh",
+    "glasgow", "aberdeen", "dundee", "inverness", "stirling", "highland", "dumfriesshire", "renfrewshire",
+  ],
+  "ie": ["dublin", "cork", "galway", "limerick", "kerry", "mayo", "sligo", "tipperary", "wexford", "waterford", "kildare", "meath", "clare", "donegal", "leinster", "munster", "connacht"],
+  "gb-nir": ["antrim", "belfast", "londonderry", "derry", "armagh", "tyrone", "fermanagh"],
+  "gb-eng": [
+    "wiltshire", "somerset", "staffordshire", "lancashire", "cheshire", "yorkshire", "devon", "cornwall", "dorset", "hampshire",
+    "kent", "sussex", "surrey", "essex", "norfolk", "suffolk", "cumberland", "cumbria", "northumberland", "durham", "derbyshire",
+    "nottinghamshire", "leicestershire", "lincolnshire", "gloucestershire", "oxfordshire", "berkshire", "middlesex", "london",
+    "shropshire", "herefordshire", "worcestershire", "warwickshire", "northamptonshire", "bedfordshire", "hertfordshire",
+    "cambridgeshire", "buckinghamshire", "huntingdonshire", "rutland", "westmorland", "manchester", "liverpool", "birmingham",
+    "wigan", "leeds", "sheffield", "bristol",
+  ],
+};
+
+const HINT_TO_CODE = new Map<string, string>();
+for (const [code, words] of Object.entries(PLACE_HINTS)) for (const word of words) HINT_TO_CODE.set(key(word), code);
+
+/** The country a birthplace like "Chippenham, Wiltshire, England" points to, or null when it names none we know. */
+export function flagCodeFromPlace(place: string | undefined | null): string | null {
+  if (!place) return null;
+  const parts = place
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  // Country names first (read from the end), then county/city hints, then single words ("West Monkton Somerset England").
+  for (const part of [...parts].reverse()) {
+    const found = BY_KEY.get(key(part));
+    if (found) return found.code;
+  }
+  for (const part of [...parts].reverse()) {
+    const hint = HINT_TO_CODE.get(key(part));
+    if (hint) return hint;
+  }
+  const words = place.split(/[\s,]+/).filter(Boolean).reverse();
+  for (const word of words) {
+    const found = BY_KEY.get(key(word));
+    if (found) return found.code;
+  }
+  for (const word of words) {
+    const hint = HINT_TO_CODE.get(key(word));
+    if (hint) return hint;
+  }
+  return null;
+}
+
+export function countryNameFor(code: string | null): string {
+  return COUNTRIES.find((country) => country.code === code)?.name ?? "";
+}
+
 export function flagUrl(code: string): string {
   return `/flags/${code}.svg`;
 }
