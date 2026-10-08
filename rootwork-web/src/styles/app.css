@@ -3084,3 +3084,77 @@ body {
 .ask-claude-compose .dialog-actions {
   margin-top: 0;
 }
+
+/* Welcome / first-run card */
+.welcome-card {
+  width: min(600px, 100%);
+  padding: 36px 40px 32px;
+}
+
+.welcome-card h3 {
+  font-size: 36px;
+  line-height: 1.12;
+  margin: 10px 0 14px;
+}
+
+.welcome-card .welcome-lead {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.welcome-steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 20px 0 22px;
+  padding: 0;
+  color: var(--color-neutral-700);
+  font-size: 14px;
+}
+
+.welcome-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-700);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.welcome-card .field > label {
+  font-size: 13px;
+}
+
+.welcome-card .welcome-input {
+  font-size: 18px;
+  padding: 12px 14px;
+}
+
+.welcome-card .btn.welcome-start {
+  margin-top: 20px;
+  width: 100%;
+  font-size: 16px;
+  padding: 13px 18px;
+}
+
+.welcome-card .welcome-import {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.welcome-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-700);
+  text-decoration: underline;
+  cursor: pointer;
+}

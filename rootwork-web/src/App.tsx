@@ -177,6 +177,12 @@ export default function App() {
                 onTogglePanel={ui.togglePanel}
                 onStub={ui.openStub}
                 onAddPerson={() => ui.openAddPerson()}
+                treeTitle={treeTitle}
+                onStartTree={(name) => {
+                  if (name !== treeTitle) void store.renameTree(store.workspaces.currentId, name);
+                  ui.openAddPerson();
+                }}
+                onImportBackup={() => ui.setNav("export")}
                 onAddParent={(childId, gender) => {
                   const child = people[childId];
                   const hasFather = child?.parentIds.some((id) => people[id]?.gender === "male");

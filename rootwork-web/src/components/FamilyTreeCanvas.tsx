@@ -1,3 +1,4 @@
+import { WelcomeCard } from "./WelcomeCard";
 import { useEffect, useMemo, useState } from "react";
 import {
   FAMILY_LAYOUT,
@@ -246,6 +247,9 @@ type FamilyTreeCanvasProps = {
   onTogglePanel: () => void;
   onStub: (title: string) => void;
   onAddPerson: () => void;
+  treeTitle?: string;
+  onStartTree?: (name: string) => void;
+  onImportBackup?: () => void;
   onAddParent: (childId: string, gender?: Gender) => void;
   onRemoveParent: (childId: string, parentId: string) => void;
   onAddSpouse: (personId: string) => void;
@@ -298,6 +302,9 @@ export function FamilyTreeCanvas({
   onRecenter,
   onTogglePanel,
   onAddPerson,
+  treeTitle,
+  onStartTree,
+  onImportBackup,
   onAddParent,
   onRemoveParent,
   onAddSpouse,
@@ -624,6 +631,13 @@ export function FamilyTreeCanvas({
         )
       ) : (
         <div className="empty-tree">
+          {!readOnly && onStartTree ? (
+            <WelcomeCard
+              treeTitle={treeTitle ?? ""}
+              onStart={onStartTree}
+              onImport={() => onImportBackup?.()}
+            />
+          ) : (
           <div className="card elev-md placeholder-card">
             <div className="placeholder-kicker">This tree</div>
             <h3>No one here yet</h3>
@@ -638,6 +652,7 @@ export function FamilyTreeCanvas({
             </button>
             )}
           </div>
+          )}
         </div>
       )}
 
