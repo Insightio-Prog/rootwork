@@ -1,4 +1,5 @@
 import { displayName, parseYear, resolvedMarriage, type Person } from "../data/people";
+import { surnameKey } from "./surname";
 
 export const DEFAULT_FAMILY_LINES: string[] = [];
 
@@ -25,9 +26,9 @@ export function normalizeFamilyLine(value: string): string {
 }
 
 export function linesMatch(familyName: string, lines: string[]): boolean {
-  const family = familyName.trim().toLowerCase();
+  const family = surnameKey(familyName);
   if (!family) return false;
-  return lines.some((line) => line.trim().toLowerCase() === family);
+  return lines.some((line) => surnameKey(line) === family);
 }
 
 export function familyNamesInTree(people: Record<string, Person>): string[] {

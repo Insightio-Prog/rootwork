@@ -1,4 +1,5 @@
 import { FAMILY_LAYOUT, layoutFamilies, type FamilyLayoutConstants } from "../chart/familyLayout";
+import { surnameKey } from "./surname";
 import { childrenOf, orderedParents, spousesOf, type Person } from "../data/people";
 import { connectorLayout, connectorPoints, coupleBrackets } from "./connectors";
 
@@ -30,7 +31,7 @@ export type LayoutSnapshot = {
 };
 
 export function normalizeFamilyName(value: string): string {
-  return value.trim().toLowerCase();
+  return surnameKey(value);
 }
 
 export const MAX_FAMILY_LINES = 4;
@@ -50,16 +51,24 @@ export function uniqueFamilyLineNames(names: Iterable<string>, max = MAX_FAMILY_
 }
 
 export function familyLineSurnames(people: Record<string, Person>): { name: string; count: number }[] {
-  const counts = new Map<string, { name: string; count: number }>();
+  const counts = new Map<string, { name: string; count: number; spellings: Map<string, number> }>();
   for (const person of Object.values(people)) {
     const name = person.familyName.trim();
     if (!name) continue;
     const key = normalizeFamilyName(name);
-    const existing = counts.get(key);
-    if (existing) existing.count += 1;
-    else counts.set(key, { name, count: 1 });
+    if (!key) continue;
+    const existing = counts.get(key) ?? { name, count: 0, spellings: new Map<string, number>() };
+    existing.count += 1;
+    existing.spellings.set(name, (existing.spellings.get(name) ?? 0) + 1);
+    counts.set(key, existing);
   }
-  return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  // Variant spellings are one line, shown under the spelling used most often.
+  return [...counts.values()]
+    .map(({ count, spellings }) => ({
+      name: [...spellings.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0],
+      count,
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 export function peopleForFamilyLine(

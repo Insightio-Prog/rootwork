@@ -423,7 +423,7 @@ body {
 .tree-line {
   fill: none;
   stroke: var(--color-neutral-400);
-  stroke-width: 2;
+  stroke-width: max(2px, calc(1px / var(--tree-zoom, 1)));
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: opacity 120ms ease, stroke 120ms ease, stroke-width 120ms ease;
@@ -436,7 +436,7 @@ body {
 .tree-lines-hot .tree-line.is-hot {
   opacity: 1;
   stroke: var(--color-accent);
-  stroke-width: calc(1.75 / var(--tree-zoom, 1));
+  stroke-width: calc(clamp(1px, calc(2.4px * var(--tree-zoom, 1)), 2.4px) / var(--tree-zoom, 1));
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -447,12 +447,12 @@ body {
 
 .tree-line-bracket {
   stroke: var(--color-accent-2);
-  stroke-width: 2;
+  stroke-width: max(2px, calc(1px / var(--tree-zoom, 1)));
 }
 
 .tree-line-spouse {
   stroke: var(--color-accent-2);
-  stroke-width: 3;
+  stroke-width: max(3px, calc(1px / var(--tree-zoom, 1)));
 }
 
 .tree-node {
