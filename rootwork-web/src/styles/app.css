@@ -3412,3 +3412,12 @@ body {
 .life-story-page.is-picker .story-section-title:first-of-type { margin-top: 8px; }
 .person-mono.is-family { display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface)); color: var(--color-accent-800); font-size: 20px; }
 .life-story-picker-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Change home person: search and pick */
+.phone-picker { display: flex; flex-direction: column; max-height: calc(100dvh - 48px); width: min(440px, calc(100vw - 24px)); }
+.phone-picker-now { margin: 0 0 10px; font-size: 13px; color: var(--color-neutral-700); }
+.phone-picker-search { display: flex; align-items: center; gap: 8px; padding: 0 14px; height: 44px; border-radius: 999px; border: 1px solid var(--color-divider); background: var(--color-surface); }
+.phone-picker-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: inherit; }
+.phone-picker-list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; -webkit-overflow-scrolling: touch; }
+.phone-picker-hint { margin: 8px 4px; font-size: 13px; color: var(--color-neutral-700); }
+.phone-fan-home { position: absolute; left: 10px; top: 62px; z-index: 5; border: 1px solid var(--color-divider); background: var(--color-surface); color: var(--color-accent-800); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12.5px; cursor: pointer; box-shadow: var(--shadow-md); }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { displayName, yearsLabel, type Person } from "../data/people";
 import { FanChart } from "./FanChart";
 import { PersonAvatar } from "./PersonAvatar";
+import { PhonePersonPicker } from "./PhonePersonPicker";
 
 type PhoneFanProps = {
   people: Record<string, Person>;
@@ -15,6 +16,7 @@ const noop = () => undefined;
 /** The whole family at a glance. Tap a wedge for a small card; the card opens that person in Family. */
 export function PhoneFan({ people, homePersonId, onOpenInFamily, onMakeHome }: PhoneFanProps) {
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const [rootRequest, setRootRequest] = useState<{ id: string; n: number } | null>(null);
   const homeId = homePersonId && people[homePersonId] ? homePersonId : (Object.keys(people)[0] ?? null);
   const picked = pickedId ? people[pickedId] : undefined;
@@ -46,6 +48,24 @@ export function PhoneFan({ people, homePersonId, onOpenInFamily, onMakeHome }: P
           onAddRelative={noop}
         />
       </div>
+      {onMakeHome && (
+        <button type="button" className="phone-fan-home" onClick={() => setPicking(true)}>
+          Change home person
+        </button>
+      )}
+      {picking && onMakeHome && (
+        <PhonePersonPicker
+          people={people}
+          homePersonId={homePersonId}
+          onClose={() => setPicking(false)}
+          onPick={(id) => {
+            onMakeHome(id);
+            setPicking(false);
+            setPickedId(null);
+            setRootRequest(null);
+          }}
+        />
+      )}
       {picked && (
         <div className="phone-fan-card" role="dialog" aria-label={displayName(picked)}>
           <PersonAvatar person={picked} className={`person-mono is-${picked.gender}`} />

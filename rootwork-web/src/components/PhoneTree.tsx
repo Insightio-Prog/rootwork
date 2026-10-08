@@ -16,6 +16,7 @@ import { NotesDialog } from "./NotesDialog";
 import { PersonAvatar } from "./PersonAvatar";
 import { PersonFlag } from "./PersonFlag";
 import { PersonPanel } from "./PersonPanel";
+import { PhonePersonPicker } from "./PhonePersonPicker";
 
 type PhoneTreeProps = {
   people: Record<string, Person>;
@@ -96,6 +97,7 @@ export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLif
   const [trail, setTrail] = useState<string[]>([]);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [notesFor, setNotesFor] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
 
   function go(id: string) {
     if (!people[id]) return;
@@ -153,6 +155,11 @@ export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLif
         >
           ← Back
         </button>
+        {onMakeHome && (
+          <button type="button" className="btn btn-secondary" onClick={() => setPicking(true)}>
+            Change home person
+          </button>
+        )}
         {!isHome && homePersonId && people[homePersonId] && (
           <button type="button" className="btn btn-secondary" onClick={() => go(homePersonId)}>
             Home person
@@ -209,6 +216,21 @@ export function PhoneTree({ people, homePersonId, locateId, locateKey, onOpenLif
       <Section title={spouses.length > 1 ? "Partners" : "Partner"} people={spouses} onOpen={go} />
       <Section title="Siblings" people={siblings} onOpen={go} />
       <Section title="Children" people={children} onOpen={go} />
+
+      {picking && onMakeHome && (
+        <PhonePersonPicker
+          people={people}
+          homePersonId={homePersonId}
+          onClose={() => setPicking(false)}
+          onPick={(id) => {
+            onMakeHome(id);
+            setPicking(false);
+            setTrail([]);
+            setFocusId(id);
+            window.scrollTo?.({ top: 0 });
+          }}
+        />
+      )}
 
       {profileId && people[profileId] && (
         <div className="phone-profile">
