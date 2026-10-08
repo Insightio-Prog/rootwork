@@ -12,6 +12,7 @@ import { AddressDialog } from "./AddressDialog";
 import { MarriageDialog } from "./MarriageDialog";
 import { NotableEventDialog } from "./NotableEventDialog";
 import { IconPencil } from "../icons";
+import { Linkify } from "./Linkify";
 
 type LifeSectionProps = {
   people: Record<string, Person>;
@@ -196,7 +197,11 @@ export function LifeSection({
                       />
                     </div>
                     {event.date ? <div className="vital-place">{event.date}</div> : null}
-                    {event.detail ? <div className="vital-place">{event.detail}</div> : null}
+                    {event.detail ? (
+                      <div className="vital-place note-text">
+                        <Linkify text={event.detail} />
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -224,7 +229,9 @@ export function LifeSection({
           <div className="life-item">
             <div className="life-copy">
               <div className="life-kicker">Notes</div>
-              <div className="vital-place note-text">{person.notes}</div>
+              <div className="vital-place note-text">
+                <Linkify text={person.notes} />
+              </div>
             </div>
           </div>
         ) : null}

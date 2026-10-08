@@ -3159,7 +3159,9 @@ body {
   cursor: pointer;
 }
 
-.note-text { white-space: pre-wrap; }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.panel-body { overflow-x: hidden; }
+.panel-body .vital-date, .panel-body .vital-place, .panel-body .life-fact { overflow-wrap: anywhere; min-width: 0; }
 .source-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .source-link { color: var(--color-accent); font-size: 13px; text-decoration: none; line-height: 1.35; }
 .source-link:hover { text-decoration: underline; }
